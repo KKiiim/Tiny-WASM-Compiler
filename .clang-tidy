@@ -1,0 +1,81 @@
+Checks:
+'-*,
+
+bugprone-*,
+-bugprone-easily-swappable-parameters,
+
+cert-*,
+-cert-err58-cpp,
+
+clang-analyzer-*,
+
+cppcoreguidelines-*,
+-cppcoreguidelines-avoid-const-or-ref-data-members,
+-cppcoreguidelines-avoid-non-const-global-variables,
+-cppcoreguidelines-pro-bounds-constant-array-index,
+-cppcoreguidelines-use-default-member-init,
+
+modernize-*,
+-modernize-concat-nested-namespaces,
+-modernize-use-auto,
+-modernize-use-default-member-init,
+-modernize-use-nodiscard,
+-modernize-use-trailing-return-type,
+
+performance-*,
+-performance-avoid-endl,
+
+google-default-arguments,
+google-explicit-constructor,
+google-global-names-in-headers,
+google-readability-casting,
+google-readability-todo,
+google-runtime-operator,
+google-runtime-int,
+
+misc-const-correctness,
+misc-definitions-in-headers,
+misc-misplaced-const,
+misc-redundant-expression,
+misc-unused-alias-decls,
+misc-unused-parameters,
+misc-unused-using-decls,
+misc-unconventional-assign-operator,
+
+readability-braces-around-statements,
+readability-convert-member-functions-to-static
+readability-delete-null-pointer,
+readability-implicit-bool-conversion,
+readability-inconsistent-declaration-parameter-name,
+readability-isolate-declaration
+readability-non-const-parameter,
+readability-redundant-non-const-parameter,
+readability-redundant-control-flow,
+readability-redundant-declaration,
+readability-redundant-function-ptr-dereference,
+readability-redundant-smartptr-get,
+readability-redundant-string-cstr,
+readability-redundant-string-init,
+readability-simplify-subscript-expr,
+readability-static-accessed-through-instance,
+readability-static-definition-in-anonymous-namespace,
+readability-string-compare,
+readability-uniqueptr-delete-release,
+readability-uppercase-literal-suffix,
+'
+
+HeaderFilterRegex: ''
+FormatStyle: none
+
+CheckOptions:
+  readability-magic-numbers.IgnorePowersOf2IntegerValues: true
+  
+  cppcoreguidelines-avoid-magic-numbers.IgnorePowersOf2IntegerValues: true
+  cppcoreguidelines-macro-usage.AllowedRegexp: "^CDC_*"
+  cppcoreguidelines-narrowing-conversions.PedanticMode: true
+  cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true
+
+  misc-const-correctness.AnalyzeValues: true
+  misc-const-correctness.AnalyzeReferences: true
+  misc-const-correctness.WarnPointersAsValues: true
+  misc-const-correctness.TransformValues: true
