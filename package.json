@@ -1,0 +1,15 @@
+{
+  "name": "tiny-wasm-compiler",
+  "version": "0.0.0",
+  "description": "JIT compiler for WASM",
+  "type": "module",
+  "scripts": {
+    "check:prettier": "prettier -c .",
+    "check:cspell": "cspell \"{src,test,docs}/**/*.{hpp,cpp,c,h,md}\"",
+    "prettier:fix": "prettier -c --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.13",
+    "prettier": "^3.0.2"
+  }
+}
