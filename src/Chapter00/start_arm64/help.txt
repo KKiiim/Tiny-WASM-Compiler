@@ -8,3 +8,5 @@ run vscode launch.json
 
 // objdump
 aarch64-linux-gnu-objdump -d a.out
+
+TODO(): can not auto trigger qemu by .vscode/json debug
