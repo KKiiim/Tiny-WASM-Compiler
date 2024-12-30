@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "check:prettier": "prettier -c .",
-    "check:cspell": "cspell \"{src,test,docs}/**/*.{hpp,cpp,c,h,md}\"",
+    "check:cspell": "cspell \"{chapters,docs}/**/*.{hpp,cpp,c,h,md}\"",
     "prettier:fix": "prettier -c --write ."
   },
   "devDependencies": {
