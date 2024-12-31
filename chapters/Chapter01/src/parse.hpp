@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "byteCodeReader.hpp"
+#include "wasm_type.hpp"
 
 #define LOGGER std::cout
 #define LOGGER_END std::endl
@@ -24,27 +25,6 @@ private:
   void parseNameSection();
 
 private:
-  ///
-  /// @brief WebAssembly section IDs
-  ///
-  enum class SectionType : uint8_t {
-    CUSTOM = 0,
-    TYPE,
-    IMPORT,
-    FUNCTION,
-    TABLE,
-    MEMORY,
-    GLOBAL,
-    EXPORT,
-    START,
-    ELEMENT,
-    CODE,
-    DATA,
-    DATA_COUNT,
-    PLACEHOLDER ///< module end
-  };
-  enum class WasmImportExportType : uint8_t { FUNC = 0x00, TABLE = 0x01, MEM = 0x02, GLOBAL = 0x03 };
-
   // TODO(): not sure about the size of infos
   struct TypeInfo {
     uint32_t paramsNum;
@@ -60,7 +40,7 @@ private:
   };
 
   struct WasmInstruction {
-    uint8_t opCode;
+    OPCode opCode;
     // others need supported
   };
   struct FunctionBody {

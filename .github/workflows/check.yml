@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: format check
-        run: sudo apt install clang-format && find chapters -regex ".*\\.\\(cpp\\|hpp\\|c\\|h\\)" | xargs clang-format -style=file --Werror --dry-run -i
+        run: sudo apt install clang-format && find chapters -regex ".*\\.\\(cpp\\|hpp\\|c\\|h\\)" | xargs clang-format -style=file --Werror --dry-run
 
   prettier:
     runs-on: ubuntu-latest

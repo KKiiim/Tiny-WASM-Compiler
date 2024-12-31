@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(tiny-wasm-compiler)
-set(CMAKE_SYSTEM_NAME Linux)
 
-set(CMAKE_C_COMPILER /usr/bin/cc)
-set(CMAKE_CXX_COMPILER /usr/bin/c++)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+set(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc)
+set(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++)
+
+message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
+message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

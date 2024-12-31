@@ -156,7 +156,7 @@ void Parser::parseCodeSection() {
     for (uint32_t i = 0; i < funcBodySize - 1; ++i) {
       // TODO(): support other elements in ins
       WasmInstruction ins{};
-      uint8_t const opCode = br_.readByte<uint8_t>();
+      OPCode const opCode = br_.readByte<OPCode>();
       ins.opCode = opCode;
       instructions.push_back(ins);
     }
