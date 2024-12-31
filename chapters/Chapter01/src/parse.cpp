@@ -73,8 +73,6 @@ void Parser::startCompilation() {
     throw std::runtime_error("bytecode left length should be zero after parsing");
   }
   std::cout << "parse wasm success" << std::endl;
-
-  logParsedInfo();
 }
 
 void Parser::validateMagicNumber() {
