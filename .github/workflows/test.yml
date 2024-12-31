@@ -20,7 +20,6 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make
 
-
       - name: setup submodule
         run: |
           git submodule update --init --depth=1 third_party/Tiny-Wasm-Compiler-Learn
