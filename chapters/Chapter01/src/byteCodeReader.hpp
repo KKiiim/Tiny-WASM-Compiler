@@ -1,5 +1,7 @@
 
 #include <cstdint>
+#include <cstring>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -30,7 +32,21 @@ public:
     offset_ += offset;
   }
 
-  uint8_t readByte();
+  /// @brief Read a byte as given datatype from the binary
+  template <class Dest> Dest readByte() {
+    if (offset_ == bytecode_.size()) {
+      throw std::runtime_error("offset " + std::to_string(offset_) + " readByte failed");
+    }
+
+    static_assert(std::is_trivially_copyable<Dest>::value, "readByte requires the destination type to be copyable");
+    static_assert(sizeof(Dest) == 1, "Size of type of readByte needs to be 1");
+    Dest dest;
+    uint8_t const *const oldPtr = &bytecode_[offset_];
+    offset_++;
+    static_cast<void>(std::memcpy(&dest, oldPtr, static_cast<size_t>(sizeof(Dest))));
+    return dest;
+  }
+
   uint32_t readLEU32();
 
 private:

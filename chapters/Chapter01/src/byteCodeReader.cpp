@@ -22,12 +22,6 @@ void ByteCodeReader::readWasmBinary(std::string const &wasmPath) {
   file.close();
 }
 
-uint8_t ByteCodeReader::readByte() {
-  if (offset_ == bytecode_.size()) {
-    throw std::runtime_error("offset " + std::to_string(offset_) + " readByte failed");
-  }
-  return bytecode_[offset_++];
-}
 uint32_t ByteCodeReader::readLEU32() {
   uint8_t const *const oldPtr{&bytecode_[offset_]};
   uint32_t const value{(static_cast<uint32_t>(*oldPtr)) | (static_cast<uint32_t>(*pAddI(oldPtr, 1)) << 8U) |
