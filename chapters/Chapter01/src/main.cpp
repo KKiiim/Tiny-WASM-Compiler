@@ -7,4 +7,6 @@ int main(int argc, char *argv[]) {
   Parser parser{argv[1]};
 
   parser.startCompilation();
+
+  parser.logParsedInfo();
 }

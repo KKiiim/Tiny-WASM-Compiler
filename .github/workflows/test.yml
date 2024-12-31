@@ -17,7 +17,8 @@ jobs:
 
       # setup environment
       - name: setup ubuntu
-        run: sudo apt-get update && sudo apt-get install gcc lcov python3 -y
+        run: |
+          sudo apt-get update && sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make
 
       - name: setup submodule
         run: |
@@ -34,3 +35,7 @@ jobs:
         with:
           java-version: "11"
           distribution: "temurin"
+      
+      - name: test chapter1 parser
+        run: |
+          mkdir build && cd build && cmake .. && make -j && qemu-aarch64 -L /usr/aarch64-linux-gnu ./chapters/Chapter01/parser ../chapters/Chapter01/add.wasm

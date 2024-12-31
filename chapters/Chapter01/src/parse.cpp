@@ -73,8 +73,6 @@ void Parser::startCompilation() {
     throw std::runtime_error("bytecode left length should be zero after parsing");
   }
   std::cout << "parse wasm success" << std::endl;
-
-  logParsedInfo();
 }
 
 void Parser::validateMagicNumber() {
@@ -156,7 +154,7 @@ void Parser::parseCodeSection() {
     for (uint32_t i = 0; i < funcBodySize - 1; ++i) {
       // TODO(): support other elements in ins
       WasmInstruction ins{};
-      uint8_t const opCode = br_.readByte<uint8_t>();
+      OPCode const opCode = br_.readByte<OPCode>();
       ins.opCode = opCode;
       instructions.push_back(ins);
     }
