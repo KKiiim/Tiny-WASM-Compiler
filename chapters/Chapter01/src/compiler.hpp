@@ -4,13 +4,14 @@
 #include <vector>
 
 #include "byteCodeReader.hpp"
+#include "emit.hpp"
 #include "wasm_type.hpp"
 
 #define LOGGER std::cout
 #define LOGGER_END std::endl
-class Parser {
+class Compiler {
 public:
-  explicit Parser(std::string const &wasmPath);
+  explicit Compiler(std::string const &wasmPath);
 
   void startCompilation();
   void logParsedInfo();
@@ -23,6 +24,8 @@ private:
   void parseExportSection();
   void parseCodeSection();
   void parseNameSection();
+
+  void compile();
 
 private:
   // TODO(): not sure about the size of infos
@@ -61,4 +64,7 @@ private:
   std::vector<ExportInfo> export_{};
   std::vector<FunctionBody> codeFunctionBodys_{};
   std::vector<NameInfo> names_{};
+
+private:
+  Emit emit_{};
 };
