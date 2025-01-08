@@ -5,3 +5,4 @@ Bodys
 TNUM
 tparam
 NOLINTNEXTLINE
+POPCNT

@@ -1,3 +1,6 @@
+#ifndef SRC_COMMON_WASM_TYPE
+#define SRC_COMMON_WASM_TYPE
+
 #include <cstdint>
 
 /// @brief WebAssembly section IDs
@@ -157,3 +160,5 @@ enum class OPCode : uint8_t {
   I64_ROTL = 0x89,
   I64_ROTR = 0x8A,
 };
+
+#endif

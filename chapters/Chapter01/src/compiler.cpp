@@ -6,14 +6,14 @@
 #include <string>
 #include <vector>
 
-#include "parse.hpp"
-#include "util.hpp"
+#include "common/util.hpp"
+#include "compiler.hpp"
 
-Parser::Parser(std::string const &wasmPath) {
+Compiler::Compiler(std::string const &wasmPath) {
   br_.readWasmBinary(wasmPath);
 }
 
-void Parser::startCompilation() {
+ExecutableMemory Compiler::startCompilation() {
   validateMagicNumber();
   validateVersion();
   std::cout << "validate success" << std::endl;
@@ -73,9 +73,14 @@ void Parser::startCompilation() {
     throw std::runtime_error("bytecode left length should be zero after parsing");
   }
   std::cout << "parse wasm success" << std::endl;
+
+  // compile();
+  std::cout << "compile to machine code success" << std::endl;
+
+  return emit_.getExecutableMemory();
 }
 
-void Parser::validateMagicNumber() {
+void Compiler::validateMagicNumber() {
   constexpr std::array<uint8_t, 5U> wasmBinaryMagic{{0U, 0x61U, 0x73U, 0x6DU, 0U}};
   static_assert((wasmBinaryMagic.size() - 1U) == 4U, "Binary magic length needs to be four");
   while (br_.getOffset() < (wasmBinaryMagic.size() - 1U)) {
@@ -85,7 +90,7 @@ void Parser::validateMagicNumber() {
   }
 }
 
-void Parser::validateVersion() {
+void Compiler::validateVersion() {
   uint32_t const moduleWasmVersion{br_.readLEU32()};
   constexpr uint32_t supportedWasmVersion{1U};
 
@@ -93,7 +98,7 @@ void Parser::validateVersion() {
     throw std::runtime_error("Wasm_Version_not_supported");
   }
 }
-void Parser::parseTypeSection() {
+void Compiler::parseTypeSection() {
   uint32_t const typeNumbers{br_.readByte<uint8_t>()};
   uint32_t counter = 0U;
   while (counter < typeNumbers) {
@@ -110,7 +115,7 @@ void Parser::parseTypeSection() {
     type_.push_back({paramsNum, resNum});
   }
 }
-void Parser::parseFunctionSection() {
+void Compiler::parseFunctionSection() {
   uint32_t const funcNumbers{br_.readByte<uint8_t>()};
   uint32_t counter = 0U;
   while (counter < funcNumbers) {
@@ -120,7 +125,7 @@ void Parser::parseFunctionSection() {
     func_.push_back({index});
   }
 }
-void Parser::parseExportSection() {
+void Compiler::parseExportSection() {
   uint32_t const exportNumbers{br_.readByte<uint8_t>()};
   uint32_t counter = 0U;
   while (counter < exportNumbers) {
@@ -137,7 +142,7 @@ void Parser::parseExportSection() {
     export_.push_back({exportName, type, index});
   }
 }
-void Parser::parseCodeSection() {
+void Compiler::parseCodeSection() {
   uint32_t const funcNumbers{br_.readByte<uint8_t>()};
   uint32_t counter = 0U;
 
@@ -149,7 +154,7 @@ void Parser::parseCodeSection() {
     uint32_t const funcBodySize = br_.readByte<uint8_t>();
     funcBody.bodySize = funcBodySize;
     funcBody.localDeclCount = br_.readByte<uint8_t>();
-    // TODO(): support localDecl parser
+    // TODO(): support localDecl Compiler
     std::vector<WasmInstruction> instructions{};
     for (uint32_t i = 0; i < funcBodySize - 1; ++i) {
       // TODO(): support other elements in ins
@@ -157,6 +162,8 @@ void Parser::parseCodeSection() {
       OPCode const opCode = br_.readByte<OPCode>();
       ins.opCode = opCode;
       instructions.push_back(ins);
+
+      emit_.append(opCode);
     }
 
     funcBody.ins = std::move(instructions);
@@ -165,15 +172,22 @@ void Parser::parseCodeSection() {
 
   assert(funcNumbers == codeFunctionBodys_.size() && "parse code functionBodys exception");
 }
-void Parser::parseNameSection() {
+void Compiler::parseNameSection() {
   // uint32_t const stringLength = br_.readByte();
   // std::string name{};
   // for (uint32_t i = 0; i < stringLength; i++) {
   //   name += static_cast<char>(br_.readByte());
   // }
 }
+// void Compiler::compile() {
+//   for (auto const &func : codeFunctionBodys_) {
+//     static_cast<void>(func.bodySize);
+//     // not supported yet
+//     static_cast<void>(func.localDeclCount);
+//   }
+// }
 
-void Parser::logParsedInfo() {
+void Compiler::logParsedInfo() {
   LOGGER << "========================= type section =========================" << LOGGER_END;
   for (uint32_t i = 0; i < type_.size(); i++) {
     LOGGER << "type[" << i << "] params num = " << type_[i].paramsNum << " result num = " << type_[i].resultsNum << LOGGER_END;
