@@ -1,0 +1,263 @@
+{
+    "source_filename": "local.wast",
+    "commands": [
+        {
+            "type": "module",
+            "line": 1,
+            "filename": "local.0.wasm"
+        },
+        {
+            "type": "assert_return",
+            "line": 11,
+            "action": {
+                "type": "invoke",
+                "field": "type-local-i32",
+                "args": []
+            },
+            "expected": [
+                {
+                    "type": "i32",
+                    "value": "0"
+                }
+            ]
+        },
+        {
+            "type": "assert_return",
+            "line": 12,
+            "action": {
+                "type": "invoke",
+                "field": "type-local-i64",
+                "args": []
+            },
+            "expected": [
+                {
+                    "type": "i64",
+                    "value": "0"
+                }
+            ]
+        },
+        {
+            "type": "assert_return",
+            "line": 14,
+            "action": {
+                "type": "invoke",
+                "field": "type-param-i32",
+                "args": [
+                    {
+                        "type": "i32",
+                        "value": "2"
+                    }
+                ]
+            },
+            "expected": [
+                {
+                    "type": "i32",
+                    "value": "2"
+                }
+            ]
+        },
+        {
+            "type": "assert_return",
+            "line": 15,
+            "action": {
+                "type": "invoke",
+                "field": "type-param-i64",
+                "args": [
+                    {
+                        "type": "i64",
+                        "value": "3"
+                    }
+                ]
+            },
+            "expected": [
+                {
+                    "type": "i64",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "type": "module",
+            "line": 18,
+            "filename": "local.1.wasm"
+        },
+        {
+            "type": "assert_return",
+            "line": 37,
+            "action": {
+                "type": "invoke",
+                "field": "type-local-i32",
+                "args": []
+            },
+            "expected": []
+        },
+        {
+            "type": "assert_return",
+            "line": 38,
+            "action": {
+                "type": "invoke",
+                "field": "type-local-i64",
+                "args": []
+            },
+            "expected": []
+        },
+        {
+            "type": "assert_return",
+            "line": 40,
+            "action": {
+                "type": "invoke",
+                "field": "type-param-i32",
+                "args": [
+                    {
+                        "type": "i32",
+                        "value": "2"
+                    }
+                ]
+            },
+            "expected": []
+        },
+        {
+            "type": "assert_return",
+            "line": 41,
+            "action": {
+                "type": "invoke",
+                "field": "type-param-i64",
+                "args": [
+                    {
+                        "type": "i64",
+                        "value": "3"
+                    }
+                ]
+            },
+            "expected": []
+        },
+        {
+            "type": "assert_return",
+            "line": 42,
+            "action": {
+                "type": "invoke",
+                "field": "type-mixed",
+                "args": [
+                    {
+                        "type": "i64",
+                        "value": "0"
+                    },
+                    {
+                        "type": "i32",
+                        "value": "0"
+                    },
+                    {
+                        "type": "i32",
+                        "value": "0"
+                    }
+                ]
+            },
+            "expected": []
+        },
+        {
+            "type": "module",
+            "line": 45,
+            "filename": "local.2.wasm"
+        },
+        {
+            "type": "assert_return",
+            "line": 62,
+            "action": {
+                "type": "invoke",
+                "field": "type-local-i32",
+                "args": []
+            },
+            "expected": [
+                {
+                    "type": "i32",
+                    "value": "1"
+                }
+            ]
+        },
+        {
+            "type": "assert_return",
+            "line": 63,
+            "action": {
+                "type": "invoke",
+                "field": "type-local-i64",
+                "args": []
+            },
+            "expected": [
+                {
+                    "type": "i64",
+                    "value": "1"
+                }
+            ]
+        },
+        {
+            "type": "assert_return",
+            "line": 66,
+            "action": {
+                "type": "invoke",
+                "field": "type-param-i32",
+                "args": [
+                    {
+                        "type": "i32",
+                        "value": "2"
+                    }
+                ]
+            },
+            "expected": [
+                {
+                    "type": "i32",
+                    "value": "10"
+                }
+            ]
+        },
+        {
+            "type": "assert_return",
+            "line": 67,
+            "action": {
+                "type": "invoke",
+                "field": "type-param-i64",
+                "args": [
+                    {
+                        "type": "i64",
+                        "value": "3"
+                    }
+                ]
+            },
+            "expected": [
+                {
+                    "type": "i64",
+                    "value": "11"
+                }
+            ]
+        },
+        {
+            "type": "assert_return",
+            "line": 69,
+            "action": {
+                "type": "invoke",
+                "field": "as-local.set-value",
+                "args": []
+            },
+            "expected": []
+        },
+        {
+            "type": "assert_return",
+            "line": 70,
+            "action": {
+                "type": "invoke",
+                "field": "as-local.tee-value",
+                "args": [
+                    {
+                        "type": "i32",
+                        "value": "0"
+                    }
+                ]
+            },
+            "expected": [
+                {
+                    "type": "i32",
+                    "value": "1"
+                }
+            ]
+        }
+    ]
+}
