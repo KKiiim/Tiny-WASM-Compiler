@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "byteCodeReader.hpp"
-#include "emit.hpp"
-#include "wasm_type.hpp"
+#include "./backend/emit.hpp"
+#include "./common/wasm_type.hpp"
+#include "./frontend/byteCodeReader.hpp"
 
 #define LOGGER std::cout
 #define LOGGER_END std::endl
@@ -13,7 +13,7 @@ class Compiler {
 public:
   explicit Compiler(std::string const &wasmPath);
 
-  void startCompilation();
+  ExecutableMemory startCompilation();
   void logParsedInfo();
 
 private:

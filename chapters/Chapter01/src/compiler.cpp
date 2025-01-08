@@ -6,14 +6,14 @@
 #include <string>
 #include <vector>
 
+#include "common/util.hpp"
 #include "compiler.hpp"
-#include "util.hpp"
 
 Compiler::Compiler(std::string const &wasmPath) {
   br_.readWasmBinary(wasmPath);
 }
 
-void Compiler::startCompilation() {
+ExecutableMemory Compiler::startCompilation() {
   validateMagicNumber();
   validateVersion();
   std::cout << "validate success" << std::endl;
@@ -74,8 +74,10 @@ void Compiler::startCompilation() {
   }
   std::cout << "parse wasm success" << std::endl;
 
-  compile();
+  // compile();
   std::cout << "compile to machine code success" << std::endl;
+
+  return emit_.getExecutableMemory();
 }
 
 void Compiler::validateMagicNumber() {
@@ -160,6 +162,8 @@ void Compiler::parseCodeSection() {
       OPCode const opCode = br_.readByte<OPCode>();
       ins.opCode = opCode;
       instructions.push_back(ins);
+
+      emit_.append(opCode);
     }
 
     funcBody.ins = std::move(instructions);
@@ -175,13 +179,13 @@ void Compiler::parseNameSection() {
   //   name += static_cast<char>(br_.readByte());
   // }
 }
-void Compiler::compile() {
-  for (auto const &func : codeFunctionBodys_) {
-    static_cast<void>(func.bodySize);
-    // not supported yet
-    static_cast<void>(func.localDeclCount);
-  }
-}
+// void Compiler::compile() {
+//   for (auto const &func : codeFunctionBodys_) {
+//     static_cast<void>(func.bodySize);
+//     // not supported yet
+//     static_cast<void>(func.localDeclCount);
+//   }
+// }
 
 void Compiler::logParsedInfo() {
   LOGGER << "========================= type section =========================" << LOGGER_END;

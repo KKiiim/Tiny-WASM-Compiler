@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "../common/util.hpp"
 #include "byteCodeReader.hpp"
-#include "util.hpp"
 
 void ByteCodeReader::readWasmBinary(std::string const &wasmPath) {
   std::ifstream file(wasmPath, std::ios::binary | std::ios::ate);
