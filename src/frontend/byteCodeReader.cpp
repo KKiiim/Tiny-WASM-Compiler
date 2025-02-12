@@ -12,7 +12,7 @@ void BytecodeReader::readWasmBinary(std::string const &wasmPath) {
     throw std::runtime_error(wasmPath + " open failed");
   }
 
-  std::streamsize size = file.tellg();
+  std::streamsize const size = file.tellg();
   file.seekg(0, std::ios::beg);
   bytecode_.resize(size);
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)

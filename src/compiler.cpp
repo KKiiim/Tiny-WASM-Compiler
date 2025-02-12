@@ -175,7 +175,7 @@ void Compiler::parseCodeSection() {
     uint32_t const localDeclCount = br_.readLEB128<uint32_t>();
     uint32_t localDeclIndex = 0U;
     while (localDeclIndex++ < localDeclCount) {
-      uint32_t localTypeCount = br_.readLEB128<uint32_t>();
+      uint32_t const localTypeCount = br_.readLEB128<uint32_t>();
       assert((localTypeCount == 1U) && "only support one type local");
 
       WasmType const localType = br_.readByte<WasmType>();
