@@ -1,9 +1,11 @@
+#ifndef SRC_COMPILER_H
+#define SRC_COMPILER_H
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-#include "./backend/emit.hpp"
+#include "./backend/arm64Backend.hpp"
 #include "./common/wasm_type.hpp"
 #include "./frontend/byteCodeReader.hpp"
 
@@ -30,8 +32,8 @@ private:
 private:
   // TODO(): not sure about the size of infos
   struct TypeInfo {
-    uint32_t paramsNum;
-    uint32_t resultsNum;
+    std::vector<WasmType> params;
+    std::vector<WasmType> results;
   };
   struct FuncInfo {
     uint32_t signatureIndex; ///< Index of the function type this function is conforming to
@@ -46,9 +48,14 @@ private:
     OPCode opCode;
     // others need supported
   };
+  struct LocalInfo {
+    bool isParam;
+    uint32_t offset;
+    WasmType type;
+  };
   struct FunctionBody {
     uint32_t bodySize; // does not contain itself
-    uint32_t localDeclCount;
+    std::vector<LocalInfo> localDecls;
     std::vector<WasmInstruction> ins;
   };
   struct NameInfo {
@@ -57,7 +64,7 @@ private:
   };
 
 private:
-  ByteCodeReader br_{};
+  BytecodeReader br_{};
 
   std::vector<TypeInfo> type_{};
   std::vector<FuncInfo> func_{};
@@ -66,5 +73,7 @@ private:
   std::vector<NameInfo> names_{};
 
 private:
-  Emit emit_{};
+  Arm64Backend backend_{};
 };
+
+#endif

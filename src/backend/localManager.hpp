@@ -1,18 +1,17 @@
-#ifndef SRC_BACKEND_EMIT_H
-#define SRC_BACKEND_EMIT_H
+#ifndef SRC_BACKEND_LOCALMANAGER_H
+#define SRC_BACKEND_LOCALMANAGER_H
 
-// wasm to aarch64
 #include <cstdint>
-#include <cstdlib>
 
 #include "../common/ExecutableMemory.hpp"
-#include "../common/wasm_type.hpp"
 
-class Emit {
+class LM {
 public:
-  Emit();
+  LM();
+  /// @brief always alloc 64bits for local
+  /// @return offset in local manager
+  uint32_t add();
 
-  void append(OPCode const opcode);
   ExecutableMemory getExecutableMemory();
 
 private:

@@ -3,6 +3,22 @@
 
 #include <cstdint>
 
+///
+/// @brief Type representing the different types available in WebAssembly as their binary encoding plus a
+/// WasmType::INVALID encoding used by the compiler for internal purposes
+///
+enum class WasmType : uint8_t {
+  EXTERN_REF = 0x6F,
+  FUNC_REF = 0x70,
+  VEC_TYPE = 0x7B,
+  F64 = 0x7C,
+  F32 = 0x7D,
+  I64 = 0x7E,
+  I32 = 0x7F,
+  TVOID = 0x40,
+  INVALID = 0x00
+};
+
 /// @brief WebAssembly section IDs
 enum class SectionType : uint8_t {
   CUSTOM = 0,

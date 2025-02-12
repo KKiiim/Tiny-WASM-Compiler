@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "common/util.hpp"
+#include "common/wasm_type.hpp"
 #include "compiler.hpp"
 
 Compiler::Compiler(std::string const &wasmPath) {
@@ -20,7 +21,7 @@ ExecutableMemory Compiler::startCompilation() {
 
   while (br_.hasNextByte()) {
     SectionType const sectionType{br_.readByte<SectionType>()};
-    uint32_t const sectionSize{br_.readByte<uint8_t>()}; // FIXME(): ignore invalid size check
+    uint32_t const sectionSize{br_.readLEB128<uint32_t>()}; // FIXME(): ignore invalid size check
     switch (sectionType) {
     case SectionType::CUSTOM:
       br_.jump(sectionSize);
@@ -77,7 +78,7 @@ ExecutableMemory Compiler::startCompilation() {
   // compile();
   std::cout << "compile to machine code success" << std::endl;
 
-  return emit_.getExecutableMemory();
+  return backend_.emit.getExecutableMemory();
 }
 
 void Compiler::validateMagicNumber() {
@@ -99,7 +100,7 @@ void Compiler::validateVersion() {
   }
 }
 void Compiler::parseTypeSection() {
-  uint32_t const typeNumbers{br_.readByte<uint8_t>()};
+  uint32_t const typeNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
   while (counter < typeNumbers) {
     counter++;
@@ -110,40 +111,55 @@ void Compiler::parseTypeSection() {
       throw std::runtime_error("type_section_wrong_type");
     }
 
-    uint32_t const paramsNum = br_.readByte<uint8_t>();
-    uint32_t const resNum = br_.readByte<uint8_t>();
-    type_.push_back({paramsNum, resNum});
+    std::vector<WasmType> paramInfos{};
+    std::vector<WasmType> resultInfos{};
+
+    uint32_t const paramsNum = br_.readLEB128<uint32_t>();
+    uint32_t paramIndex = 0U;
+    while (paramIndex++ < paramsNum) {
+      paramInfos.push_back(br_.readByte<WasmType>());
+    }
+    assert(paramsNum == paramInfos.size() && "must");
+
+    uint32_t const resultNum = br_.readLEB128<uint32_t>();
+    uint32_t resultIndex = 0U;
+    while (resultIndex++ < resultNum) {
+      resultInfos.push_back(br_.readByte<WasmType>());
+    }
+    assert(resultNum == resultInfos.size() && "must");
+
+    type_.push_back({paramInfos, resultInfos});
   }
 }
 void Compiler::parseFunctionSection() {
-  uint32_t const funcNumbers{br_.readByte<uint8_t>()};
+  uint32_t const funcNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
   while (counter < funcNumbers) {
     counter++;
 
-    uint32_t const index = br_.readByte<uint8_t>();
+    uint32_t const index = br_.readLEB128<uint32_t>();
     func_.push_back({index});
   }
 }
 void Compiler::parseExportSection() {
-  uint32_t const exportNumbers{br_.readByte<uint8_t>()};
+  uint32_t const exportNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
   while (counter < exportNumbers) {
     counter++;
 
-    uint32_t const stringLength = br_.readByte<uint8_t>();
+    uint32_t const stringLength = br_.readLEB128<uint32_t>();
     std::string exportName{};
     for (uint32_t i = 0; i < stringLength; i++) {
       exportName += br_.readByte<char>();
     }
 
     WasmImportExportType const type{br_.readByte<WasmImportExportType>()};
-    uint32_t const index = br_.readByte<uint8_t>();
+    uint32_t const index = br_.readLEB128<uint32_t>();
     export_.push_back({exportName, type, index});
   }
 }
 void Compiler::parseCodeSection() {
-  uint32_t const funcNumbers{br_.readByte<uint8_t>()};
+  uint32_t const funcNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
 
   // parse each function body
@@ -151,20 +167,38 @@ void Compiler::parseCodeSection() {
     counter++;
 
     FunctionBody funcBody{};
-    uint32_t const funcBodySize = br_.readByte<uint8_t>();
+    uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
     funcBody.bodySize = funcBodySize;
-    funcBody.localDeclCount = br_.readByte<uint8_t>();
-    // TODO(): support localDecl Compiler
+
+    uint32_t const preParseFuncBROffset = br_.getOffset();
+
+    uint32_t const localDeclCount = br_.readLEB128<uint32_t>();
+    uint32_t localDeclIndex = 0U;
+    while (localDeclIndex++ < localDeclCount) {
+      uint32_t localTypeCount = br_.readLEB128<uint32_t>();
+      assert((localTypeCount == 1U) && "only support one type local");
+
+      WasmType const localType = br_.readByte<WasmType>();
+      uint32_t const localOffset = backend_.lm.add();
+
+      funcBody.localDecls.push_back({false, localOffset, localType});
+    }
+
     std::vector<WasmInstruction> instructions{};
-    for (uint32_t i = 0; i < funcBodySize - 1; ++i) {
+    while (true) {
       // TODO(): support other elements in ins
       WasmInstruction ins{};
       OPCode const opCode = br_.readByte<OPCode>();
+      if (opCode == OPCode::END) {
+        break;
+      }
       ins.opCode = opCode;
       instructions.push_back(ins);
 
-      emit_.append(opCode);
+      backend_.emit.append(opCode);
     }
+    uint32_t const postParseFuncBROffset = br_.getOffset();
+    assert((postParseFuncBROffset - preParseFuncBROffset) == funcBodySize);
 
     funcBody.ins = std::move(instructions);
     codeFunctionBodys_.push_back(std::move(funcBody));
@@ -173,7 +207,7 @@ void Compiler::parseCodeSection() {
   assert(funcNumbers == codeFunctionBodys_.size() && "parse code functionBodys exception");
 }
 void Compiler::parseNameSection() {
-  // uint32_t const stringLength = br_.readByte();
+  // uint32_t const stringLength = br_.readLEB128<uint32_t>();
   // std::string name{};
   // for (uint32_t i = 0; i < stringLength; i++) {
   //   name += static_cast<char>(br_.readByte());
@@ -190,7 +224,7 @@ void Compiler::parseNameSection() {
 void Compiler::logParsedInfo() {
   LOGGER << "========================= type section =========================" << LOGGER_END;
   for (uint32_t i = 0; i < type_.size(); i++) {
-    LOGGER << "type[" << i << "] params num = " << type_[i].paramsNum << " result num = " << type_[i].resultsNum << LOGGER_END;
+    LOGGER << "type[" << i << "] params num = " << type_[i].params.size() << " result num = " << type_[i].results.size() << LOGGER_END;
   }
   LOGGER << "========================= func section =========================" << LOGGER_END;
   for (uint32_t i = 0; i < func_.size(); i++) {
@@ -204,7 +238,7 @@ void Compiler::logParsedInfo() {
   LOGGER << "========================= code section =========================" << LOGGER_END;
   LOGGER << "function number = " << codeFunctionBodys_.size() << LOGGER_END;
   for (uint32_t i = 0; i < codeFunctionBodys_.size(); i++) {
-    LOGGER << "body[" << i << "] size = " << codeFunctionBodys_[i].bodySize << " numLocalDecl = " << codeFunctionBodys_[i].localDeclCount
+    LOGGER << "body[" << i << "] size = " << codeFunctionBodys_[i].bodySize << " numLocalDecl = " << codeFunctionBodys_[i].localDecls.size()
            << LOGGER_END;
     LOGGER << "Instructions:" << LOGGER_END;
     for (auto const &ins : codeFunctionBodys_[i].ins) {

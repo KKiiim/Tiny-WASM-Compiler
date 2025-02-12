@@ -1,3 +1,6 @@
+#ifndef SRC_COMMON_EXECUTABLEMEMORY_H
+#define SRC_COMMON_EXECUTABLEMEMORY_H
+
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
@@ -15,3 +18,5 @@ private:
   uint8_t *data_;
   uint32_t size_;
 };
+
+#endif
