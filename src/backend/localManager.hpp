@@ -8,6 +8,7 @@
 class LM {
 public:
   LM();
+  ~LM();
   /// @brief always alloc 64bits for local
   /// @return offset in local manager
   uint32_t add();

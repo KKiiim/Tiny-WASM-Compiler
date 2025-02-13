@@ -11,6 +11,7 @@
 class Emit {
 public:
   Emit();
+  ~Emit();
 
   void append(OPCode const opcode);
   ExecutableMemory getExecutableMemory();
