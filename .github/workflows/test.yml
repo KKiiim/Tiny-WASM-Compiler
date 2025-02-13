@@ -38,4 +38,4 @@ jobs:
 
       - name: test chapter1 parser
         run: |
-          mkdir build && cd build && cmake .. && make -j && qemu-aarch64 -L /usr/aarch64-linux-gnu ./demo/Compiler ../chapters/Chapter01/add.wasm
+          mkdir build && cd build && cmake .. && make -j && qemu-aarch64 -d unimp,guest_errors -L /usr/aarch64-linux-gnu ./demo/Compiler ../chapters/Chapter01/add.wasm
