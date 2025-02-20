@@ -1,6 +1,8 @@
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include <string>
 #include <sys/mman.h>
 
 #include "emit.hpp"
@@ -9,7 +11,9 @@ Emit::Emit() : data_(nullptr), size_(0U) {
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   data_ = reinterpret_cast<uint8_t *>(realloc(data_, DefaultPageSize));
 }
-
+Emit::~Emit() {
+  free(data_);
+}
 void Emit::append(OPCode const opcode) {
   if (size_ + 4 >= DefaultPageSize) {
     // TODO(): re-large
@@ -17,6 +21,16 @@ void Emit::append(OPCode const opcode) {
   }
 
   switch (opcode) {
+  case OPCode::RETURN: {
+    // d6 5f 03 c0
+    uint32_t const insRET = 0xd65f03c0; // little endian for aarch64
+    memcpy(&data_[size_], &insRET, sizeof(insRET));
+    size_ += sizeof(insRET);
+    break;
+  }
+  case OPCode::LOCAL_GET: {
+    break;
+  }
   case OPCode::UNREACHABLE:
   case OPCode::NOP:
   case OPCode::BLOCK:
@@ -27,14 +41,6 @@ void Emit::append(OPCode const opcode) {
   case OPCode::BR:
   case OPCode::BR_IF:
   case OPCode::BR_TABLE:
-    break;
-  case OPCode::RETURN: {
-    // d6 5f 03 c0
-    uint32_t const insRET = 0xd65f03c0; // little endian for aarch64
-    memcpy(&data_[size_], &insRET, sizeof(insRET));
-    size_ += sizeof(insRET);
-    break;
-  }
   case OPCode::CALL:
   case OPCode::CALL_INDIRECT:
   case OPCode::REF_NULL:
@@ -43,7 +49,6 @@ void Emit::append(OPCode const opcode) {
   case OPCode::DROP:
   case OPCode::SELECT:
   case OPCode::SELECT_T:
-  case OPCode::LOCAL_GET:
   case OPCode::LOCAL_SET:
   case OPCode::LOCAL_TEE:
   case OPCode::GLOBAL_GET:
@@ -137,6 +142,7 @@ void Emit::append(OPCode const opcode) {
   case OPCode::I64_SHR_U:
   case OPCode::I64_ROTL:
   case OPCode::I64_ROTR:
+    throw std::runtime_error("unsupported OPCode " + std::to_string(static_cast<uint32_t>(opcode)));
     break;
   }
 }

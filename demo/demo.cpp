@@ -7,10 +7,10 @@ int main(int argc, char *argv[]) {
   assert(argc == 2);
   Compiler Compiler{argv[1]};
 
-  ExecutableMemory execMemory = Compiler.startCompilation();
+  ExecutableMemory const execMemory = Compiler.startCompilation();
   Compiler.logParsedInfo();
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-  void (*func)() = reinterpret_cast<void (*)()>(execMemory.data());
+  void (*const func)() = execMemory.data<void (*)()>();
   func();
 
   std::cout << "after native call" << std::endl;
