@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   ExecutableMemory const execMemory = Compiler.startCompilation();
   Compiler.logParsedInfo();
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-  void (*const func)() = reinterpret_cast<void (*)()>(execMemory.data());
+  void (*const func)() = execMemory.data<void (*)()>();
   func();
 
   std::cout << "after native call" << std::endl;

@@ -9,14 +9,15 @@
 class ExecutableMemory {
 public:
   ExecutableMemory(uint8_t *data, uint32_t size);
-  inline uint8_t *data() const {
-    return data_;
+  template <typename T> T data() const {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    return reinterpret_cast<T>(mem_);
   }
   ~ExecutableMemory();
 
 private:
-  uint8_t *data_;
-  uint32_t size_;
+  void *mem_;
+  uint32_t alignedSize_;
 };
 
 #endif
