@@ -15,8 +15,8 @@ ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
   }
 
   std::memcpy(mem_, data, size);
-  uint8_t *fill_start = static_cast<uint8_t *>(mem_) + size;
-  std::memset(fill_start, 0x90, alignedSize_ - size); // 0x90: NOP
+  uint8_t *const fillNOPStart = static_cast<uint8_t *>(mem_) + size;
+  std::memset(fillNOPStart, 0x90, alignedSize_ - size); // 0x90: NOP
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   __builtin___clear_cache(reinterpret_cast<char *>(mem_), reinterpret_cast<char *>(mem_) + alignedSize_);
 }
