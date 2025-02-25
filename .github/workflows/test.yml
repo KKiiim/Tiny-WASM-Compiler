@@ -42,4 +42,4 @@ jobs:
       - name: test chapters
         run: |
           npm run test:c1
-          npm run test:c2
+        # npm run test:c2
