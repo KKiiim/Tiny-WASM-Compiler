@@ -6,7 +6,11 @@
   "scripts": {
     "check:prettier": "prettier -c .",
     "check:cspell": "cspell \"{src,chapters,docs}/**/*.{hpp,cpp,c,h,md}\"",
-    "prettier:fix": "prettier -c --write ."
+    "prettier:fix": "prettier -c --write .",
+    "build:demo": "rm build -fr && mkdir build && cd build && cmake .. && make -j && cd ..",
+    "test:c1": "qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/demo/Compiler chapters/Chapter01/add.wasm",
+    "test:c2": "qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/demo/Compiler chapters/Chapter01/",
+    "preCommit": "npm run check:prettier && npm run check:cspell && npm run build:demo"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",
