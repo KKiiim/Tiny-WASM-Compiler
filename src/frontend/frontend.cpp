@@ -168,7 +168,7 @@ void Frontend::parseCodeSection() {
   while (counter < funcNumbers) {
     counter++;
 
-    ModuleInfo::FunctionBody funcBody{};
+    ModuleInfo::FunctionInfo funcBody{};
     uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
     funcBody.bodySize = funcBodySize;
 
@@ -329,10 +329,10 @@ void Frontend::parseCodeSection() {
     assert((postParseFuncBROffset - preParseFuncBROffset) == funcBodySize);
 
     funcBody.ins = std::move(instructions);
-    module_.codeFunctionBodys_.push_back(std::move(funcBody));
+    module_.functionInfos_.push_back(std::move(funcBody));
   }
 
-  assert(funcNumbers == module_.codeFunctionBodys_.size() && "parse code functionBodys exception");
+  assert(funcNumbers == module_.functionInfos_.size() && "parse code functionBodys exception");
 }
 void Frontend::parseNameSection() {
   // uint32_t const stringLength = br_.readLEB128<uint32_t>();
@@ -342,7 +342,7 @@ void Frontend::parseNameSection() {
   // }
 }
 // void Frontend::compile() {
-//   for (auto const &func : codeFunctionBodys_) {
+//   for (auto const &func : functionInfos_) {
 //     static_cast<void>(func.bodySize);
 //     // not supported yet
 //     static_cast<void>(func.localDeclCount);
@@ -365,12 +365,12 @@ void Frontend::logParsedInfo() {
            << " index = " << module_.export_[i].index << LOGGER_END;
   }
   LOGGER << "========================= code section =========================" << LOGGER_END;
-  LOGGER << "function number = " << module_.codeFunctionBodys_.size() << LOGGER_END;
-  for (uint32_t i = 0; i < module_.codeFunctionBodys_.size(); i++) {
-    LOGGER << "body[" << i << "] size = " << module_.codeFunctionBodys_[i].bodySize
-           << " numLocalDecl = " << module_.codeFunctionBodys_[i].localDecls.size() << LOGGER_END;
+  LOGGER << "function number = " << module_.functionInfos_.size() << LOGGER_END;
+  for (uint32_t i = 0; i < module_.functionInfos_.size(); i++) {
+    LOGGER << "body[" << i << "] size = " << module_.functionInfos_[i].bodySize << " numLocalDecl = " << module_.functionInfos_[i].localDecls.size()
+           << LOGGER_END;
     LOGGER << "Instructions:" << LOGGER_END;
-    for (auto const &ins : module_.codeFunctionBodys_[i].ins) {
+    for (auto const &ins : module_.functionInfos_[i].ins) {
       LOGGER << static_cast<uint32_t>(ins.opCode) << LOGGER_END;
     }
   }
