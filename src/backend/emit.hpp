@@ -13,7 +13,7 @@ public:
   Emit();
   ~Emit();
 
-  void append(uint32_t const ins);
+  void append(OPCode const opcode);
   ExecutableMemory getExecutableMemory();
 
 private:

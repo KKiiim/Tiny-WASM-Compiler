@@ -1,19 +1,19 @@
-#ifndef SRC_FRONTEND_FRONTEND_H
-#define SRC_FRONTEND_FRONTEND_H
+#ifndef SRC_COMPILER_H
+#define SRC_COMPILER_H
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-#include "../backend/arm64Backend.hpp"
-#include "../common/wasm_type.hpp"
-#include "../frontend/byteCodeReader.hpp"
+#include "./backend/arm64Backend.hpp"
+#include "./common/wasm_type.hpp"
+#include "./frontend/byteCodeReader.hpp"
 
 #define LOGGER std::cout
 #define LOGGER_END std::endl
-class Frontend {
+class Compiler {
 public:
-  explicit Frontend(std::string const &wasmPath);
+  explicit Compiler(std::string const &wasmPath);
 
   ExecutableMemory startCompilation();
   void logParsedInfo();

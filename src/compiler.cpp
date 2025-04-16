@@ -6,15 +6,15 @@
 #include <string>
 #include <vector>
 
-#include "../common/util.hpp"
-#include "../common/wasm_type.hpp"
-#include "frontend.hpp"
+#include "common/util.hpp"
+#include "common/wasm_type.hpp"
+#include "compiler.hpp"
 
-Frontend::Frontend(std::string const &wasmPath) {
+Compiler::Compiler(std::string const &wasmPath) {
   br_.readWasmBinary(wasmPath);
 }
 
-ExecutableMemory Frontend::startCompilation() {
+ExecutableMemory Compiler::startCompilation() {
   validateMagicNumber();
   validateVersion();
   std::cout << "validate success" << std::endl;
@@ -81,7 +81,7 @@ ExecutableMemory Frontend::startCompilation() {
   return backend_.emit.getExecutableMemory();
 }
 
-void Frontend::validateMagicNumber() {
+void Compiler::validateMagicNumber() {
   constexpr std::array<uint8_t, 5U> wasmBinaryMagic{{0U, 0x61U, 0x73U, 0x6DU, 0U}};
   static_assert((wasmBinaryMagic.size() - 1U) == 4U, "Binary magic length needs to be four");
   while (br_.getOffset() < (wasmBinaryMagic.size() - 1U)) {
@@ -91,7 +91,7 @@ void Frontend::validateMagicNumber() {
   }
 }
 
-void Frontend::validateVersion() {
+void Compiler::validateVersion() {
   uint32_t const moduleWasmVersion{br_.readLEU32()};
   constexpr uint32_t supportedWasmVersion{1U};
 
@@ -99,7 +99,7 @@ void Frontend::validateVersion() {
     throw std::runtime_error("Wasm_Version_not_supported");
   }
 }
-void Frontend::parseTypeSection() {
+void Compiler::parseTypeSection() {
   uint32_t const typeNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
   while (counter < typeNumbers) {
@@ -131,7 +131,7 @@ void Frontend::parseTypeSection() {
     type_.push_back({paramInfos, resultInfos});
   }
 }
-void Frontend::parseFunctionSection() {
+void Compiler::parseFunctionSection() {
   uint32_t const funcNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
   while (counter < funcNumbers) {
@@ -141,7 +141,7 @@ void Frontend::parseFunctionSection() {
     func_.push_back({index});
   }
 }
-void Frontend::parseExportSection() {
+void Compiler::parseExportSection() {
   uint32_t const exportNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
   while (counter < exportNumbers) {
@@ -158,7 +158,7 @@ void Frontend::parseExportSection() {
     export_.push_back({exportName, type, index});
   }
 }
-void Frontend::parseCodeSection() {
+void Compiler::parseCodeSection() {
   uint32_t const funcNumbers{br_.readLEB128<uint32_t>()};
   uint32_t counter = 0U;
 
@@ -188,137 +188,14 @@ void Frontend::parseCodeSection() {
     while (true) {
       // TODO(): support other elements in ins
       WasmInstruction ins{};
-      OPCode const opcode = br_.readByte<OPCode>();
-      if (opcode == OPCode::END) {
+      OPCode const opCode = br_.readByte<OPCode>();
+      if (opCode == OPCode::END) {
         break;
       }
-      ins.opCode = opcode;
+      ins.opCode = opCode;
       instructions.push_back(ins);
 
-      switch (opcode) {
-      case OPCode::RETURN: {
-        // d6 5f 03 c0
-        uint32_t const insRET = 0xd65f03c0; // little endian for aarch64
-        backend_.emit.append(insRET);
-        break;
-      }
-      case OPCode::LOCAL_GET: {
-        break;
-      }
-      case OPCode::UNREACHABLE:
-      case OPCode::NOP:
-      case OPCode::BLOCK:
-      case OPCode::LOOP:
-      case OPCode::IF:
-      case OPCode::ELSE:
-      case OPCode::END:
-      case OPCode::BR:
-      case OPCode::BR_IF:
-      case OPCode::BR_TABLE:
-      case OPCode::CALL:
-      case OPCode::CALL_INDIRECT:
-      case OPCode::REF_NULL:
-      case OPCode::REF_IS_NULL:
-      case OPCode::REF_FUNC:
-      case OPCode::DROP:
-      case OPCode::SELECT:
-      case OPCode::SELECT_T:
-      case OPCode::LOCAL_SET:
-      case OPCode::LOCAL_TEE:
-      case OPCode::GLOBAL_GET:
-      case OPCode::GLOBAL_SET:
-      case OPCode::TABLE_GET:
-      case OPCode::TABLE_SET:
-      case OPCode::I32_LOAD:
-      case OPCode::I64_LOAD:
-      case OPCode::F32_LOAD:
-      case OPCode::F64_LOAD:
-      case OPCode::I32_LOAD8_S:
-      case OPCode::I32_LOAD8_U:
-      case OPCode::I32_LOAD16_S:
-      case OPCode::I32_LOAD16_U:
-      case OPCode::I64_LOAD8_S:
-      case OPCode::I64_LOAD8_U:
-      case OPCode::I64_LOAD16_S:
-      case OPCode::I64_LOAD16_U:
-      case OPCode::I64_LOAD32_S:
-      case OPCode::I64_LOAD32_U:
-      case OPCode::I32_STORE:
-      case OPCode::I64_STORE:
-      case OPCode::F32_STORE:
-      case OPCode::F64_STORE:
-      case OPCode::I32_STORE8:
-      case OPCode::I32_STORE16:
-      case OPCode::I64_STORE8:
-      case OPCode::I64_STORE16:
-      case OPCode::I64_STORE32:
-      case OPCode::MEMORY_SIZE:
-      case OPCode::MEMORY_GROW:
-      case OPCode::I32_CONST:
-      case OPCode::I64_CONST:
-      case OPCode::F32_CONST:
-      case OPCode::F64_CONST:
-      case OPCode::I32_EQZ:
-      case OPCode::I32_EQ:
-      case OPCode::I32_NE:
-      case OPCode::I32_LT_S:
-      case OPCode::I32_LT_U:
-      case OPCode::I32_GT_S:
-      case OPCode::I32_GT_U:
-      case OPCode::I32_LE_S:
-      case OPCode::I32_LE_U:
-      case OPCode::I32_GE_S:
-      case OPCode::I32_GE_U:
-      case OPCode::I64_EQZ:
-      case OPCode::I64_EQ:
-      case OPCode::I64_NE:
-      case OPCode::I64_LT_S:
-      case OPCode::I64_LT_U:
-      case OPCode::I64_GT_S:
-      case OPCode::I64_GT_U:
-      case OPCode::I64_LE_S:
-      case OPCode::I64_LE_U:
-      case OPCode::I64_GE_S:
-      case OPCode::I64_GE_U:
-      case OPCode::I32_CLZ:
-      case OPCode::I32_CTZ:
-      case OPCode::I32_POPCNT:
-      case OPCode::I32_ADD:
-      case OPCode::I32_SUB:
-      case OPCode::I32_MUL:
-      case OPCode::I32_DIV_S:
-      case OPCode::I32_DIV_U:
-      case OPCode::I32_REM_S:
-      case OPCode::I32_REM_U:
-      case OPCode::I32_AND:
-      case OPCode::I32_OR:
-      case OPCode::I32_XOR:
-      case OPCode::I32_SHL:
-      case OPCode::I32_SHR_S:
-      case OPCode::I32_SHR_U:
-      case OPCode::I32_ROTL:
-      case OPCode::I32_ROTR:
-      case OPCode::I64_CLZ:
-      case OPCode::I64_CTZ:
-      case OPCode::I64_POPCNT:
-      case OPCode::I64_ADD:
-      case OPCode::I64_SUB:
-      case OPCode::I64_MUL:
-      case OPCode::I64_DIV_S:
-      case OPCode::I64_DIV_U:
-      case OPCode::I64_REM_S:
-      case OPCode::I64_REM_U:
-      case OPCode::I64_AND:
-      case OPCode::I64_OR:
-      case OPCode::I64_XOR:
-      case OPCode::I64_SHL:
-      case OPCode::I64_SHR_S:
-      case OPCode::I64_SHR_U:
-      case OPCode::I64_ROTL:
-      case OPCode::I64_ROTR:
-        throw std::runtime_error("unsupported OPCode " + std::to_string(static_cast<uint32_t>(opcode)));
-        break;
-      }
+      backend_.emit.append(opCode);
     }
     uint32_t const postParseFuncBROffset = br_.getOffset();
     assert((postParseFuncBROffset - preParseFuncBROffset) == funcBodySize);
@@ -329,14 +206,14 @@ void Frontend::parseCodeSection() {
 
   assert(funcNumbers == codeFunctionBodys_.size() && "parse code functionBodys exception");
 }
-void Frontend::parseNameSection() {
+void Compiler::parseNameSection() {
   // uint32_t const stringLength = br_.readLEB128<uint32_t>();
   // std::string name{};
   // for (uint32_t i = 0; i < stringLength; i++) {
   //   name += static_cast<char>(br_.readByte());
   // }
 }
-// void Frontend::compile() {
+// void Compiler::compile() {
 //   for (auto const &func : codeFunctionBodys_) {
 //     static_cast<void>(func.bodySize);
 //     // not supported yet
@@ -344,7 +221,7 @@ void Frontend::parseNameSection() {
 //   }
 // }
 
-void Frontend::logParsedInfo() {
+void Compiler::logParsedInfo() {
   LOGGER << "========================= type section =========================" << LOGGER_END;
   for (uint32_t i = 0; i < type_.size(); i++) {
     LOGGER << "type[" << i << "] params num = " << type_[i].params.size() << " result num = " << type_[i].results.size() << LOGGER_END;
