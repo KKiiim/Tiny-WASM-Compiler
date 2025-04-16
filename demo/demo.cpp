@@ -5,10 +5,10 @@
 
 int main(int argc, char *argv[]) {
   assert(argc == 2);
-  Compiler Compiler{argv[1]};
+  Compiler compiler;
 
-  ExecutableMemory const execMemory = Compiler.startCompilation();
-  Compiler.logParsedInfo();
+  ExecutableMemory const execMemory = compiler.compile(argv[1]);
+
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   void (*const func)() = execMemory.data<void (*)()>();
   func();
