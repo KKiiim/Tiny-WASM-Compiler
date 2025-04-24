@@ -56,7 +56,7 @@ constexpr REG memSize{REG::R27};
 /// @brief Register that the landing pad can use as a scratch register, can also be used by emitMove
 constexpr REG landingPadHelper{REG::R27};
 #endif
-
+// R28-> start | operand stack start address
 constexpr REG jobMem{REG::R28}; ///< Pointer to base of job memory
 constexpr REG linMem{REG::FP};  ///< Pointer to base of linear memory
 constexpr REG trapReg{REG::R0}; ///< Register for internal usage where the trap indicator will be passed

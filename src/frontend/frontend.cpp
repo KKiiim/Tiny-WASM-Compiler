@@ -10,7 +10,7 @@
 #include "../common/wasm_type.hpp"
 #include "frontend.hpp"
 
-Frontend::Frontend(std::string const &wasmPath, Stack &stack) : stack_(stack) {
+Frontend::Frontend(std::string const &wasmPath, Stack &stack, OperandStack &operandStack) : stack_(stack), operandStack_(operandStack) {
   br_.readWasmBinary(wasmPath);
 }
 
@@ -166,6 +166,8 @@ void Frontend::parseCodeSection() {
 
   // parse each function body
   while (counter < funcNumbers) {
+    uint32_t const funcSignatureIndex{module_.func_[counter].signatureIndex};
+    auto const &funcTypeInfo = module_.type_[funcSignatureIndex];
     counter++;
 
     ModuleInfo::FunctionInfo funcBody{};
@@ -203,11 +205,19 @@ void Frontend::parseCodeSection() {
       switch (opcode) {
       case OPCode::RETURN: {
         // d6 5f 03 c0
-        uint32_t const insRET = 0xd65f03c0; // little endian for aarch64
+        OPCodeTemplate const insRET = 0xd65f03c0; // little endian for aarch64
         backend_.emit.append(insRET);
         break;
       }
       case OPCode::LOCAL_GET: {
+        uint32_t const localIdx{br_.readLEB128<uint32_t>()};
+        assert(localIdx < funcTypeInfo.params.size());
+        break;
+      }
+      case OPCode::LOCAL_SET: {
+        break;
+      }
+      case OPCode::LOCAL_TEE: {
         break;
       }
       case OPCode::UNREACHABLE:
@@ -228,8 +238,6 @@ void Frontend::parseCodeSection() {
       case OPCode::DROP:
       case OPCode::SELECT:
       case OPCode::SELECT_T:
-      case OPCode::LOCAL_SET:
-      case OPCode::LOCAL_TEE:
       case OPCode::GLOBAL_GET:
       case OPCode::GLOBAL_SET:
       case OPCode::TABLE_GET:
@@ -330,6 +338,8 @@ void Frontend::parseCodeSection() {
 
     funcBody.ins = std::move(instructions);
     module_.functionInfos_.push_back(std::move(funcBody));
+
+    // backend_.;
   }
 
   assert(funcNumbers == module_.functionInfos_.size() && "parse code functionBodys exception");

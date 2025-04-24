@@ -15,7 +15,7 @@
 #define LOGGER_END std::endl
 class Frontend {
 public:
-  explicit Frontend(std::string const &wasmPath, Stack &stack);
+  explicit Frontend(std::string const &wasmPath, Stack &stack, OperandStack &operandStack);
 
   ExecutableMemory startCompilation();
   void logParsedInfo();
@@ -41,6 +41,7 @@ private:
   Arm64Backend backend_{};
 
   Stack &stack_;
+  OperandStack &operandStack_;
 };
 
 #endif

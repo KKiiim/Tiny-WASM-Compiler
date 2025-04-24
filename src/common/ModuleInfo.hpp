@@ -13,7 +13,6 @@ enum class StorageType : uint8_t { STACKMEMORY, LINKDATA, REGISTER, CONSTANT, IN
 
 class ModuleInfo final {
 public:
-  // TODO(): not sure about the size of infos
   struct TypeInfo {
     std::vector<WasmType> params;
     std::vector<WasmType> results;
@@ -52,7 +51,9 @@ public:
 
   std::vector<FunctionInfo> functionInfos_;
 
+  // type_[i]: signatureIndex i to TypeInfo
   std::vector<TypeInfo> type_{};
+  // func_[i]: functionIndex i to signatureIndex(FuncInfo)
   std::vector<FuncInfo> func_{};
   std::vector<ExportInfo> export_{};
   std::vector<NameInfo> names_{};

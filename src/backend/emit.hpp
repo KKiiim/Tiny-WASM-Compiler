@@ -7,13 +7,14 @@
 
 #include "../common/ExecutableMemory.hpp"
 #include "../common/wasm_type.hpp"
+#include "aarch64_encoding.hpp"
 
 class Emit {
 public:
   Emit();
   ~Emit();
 
-  void append(uint32_t const ins);
+  void append(OPCodeTemplate const ins);
   ExecutableMemory getExecutableMemory();
 
 private:

@@ -58,4 +58,9 @@ inline bool isGPR(REG const reg) {
 ///
 enum class CC : uint8_t { EQ, NE, CS, HS = CS, CC, LO = CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV, NONE = 0xFF };
 
+///
+/// @brief Basic template for AArch64 OPCodes
+///
+using OPCodeTemplate = uint32_t;
+
 #endif
