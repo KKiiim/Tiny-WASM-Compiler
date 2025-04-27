@@ -37,7 +37,8 @@ public:
   };
   struct FunctionInfo {
     uint32_t bodySize; // does not contain itself
-    std::vector<LocalInfo> localDecls;
+    uint32_t paramsNumber;
+    std::vector<LocalInfo> locals;
     std::vector<WasmInstruction> ins;
   };
   struct NameInfo {

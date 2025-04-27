@@ -2,7 +2,6 @@
 #define SRC_BACKEND_ARM64BACKEND_H
 
 #include "emit.hpp"
-#include "localManager.hpp"
 
 class Arm64Backend {
 public:
@@ -10,7 +9,6 @@ public:
 
 public:
   Emit emit{};
-  LM lm{};
 };
 
 #endif
