@@ -5,6 +5,7 @@
 #include <string>
 #include <sys/mman.h>
 
+#include "aarch64_encoding.hpp"
 #include "emit.hpp"
 
 Emit::Emit() : data_(nullptr), size_(0U) {
@@ -14,9 +15,9 @@ Emit::Emit() : data_(nullptr), size_(0U) {
 Emit::~Emit() {
   free(data_);
 }
-void Emit::append(uint32_t const ins) {
-  if (size_ + 4 >= DefaultPageSize) {
-    // TODO(): re-large
+void Emit::append(OPCodeTemplate const ins) {
+  if (size_ + sizeof(OPCodeTemplate) >= DefaultPageSize) {
+    // TODO(): enlarge
     throw std::runtime_error("too large code size");
   }
 

@@ -1,5 +1,5 @@
-#ifndef SRC_COMMON_WASM_TYPE
-#define SRC_COMMON_WASM_TYPE
+#ifndef SRC_COMMON_WASM_TYPE_H
+#define SRC_COMMON_WASM_TYPE_H
 
 #include <cstdint>
 
