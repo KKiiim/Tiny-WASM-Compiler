@@ -16,6 +16,9 @@ public:
 
 private:
   uint32_t size_ = 0U;
+
+  // Max number of local variables in a function
+  static constexpr const uint32_t MAX_LOCAL_VARS = 8U;
 };
 
 #endif
