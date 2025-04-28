@@ -7,15 +7,19 @@
 
 class LM {
 public:
-  /// @brief store i32 than store i64
+  LM(Arm64Backend& backend) : size_(0U),backend_(backend) {}
+  /// @brief store i32 and i64
   /// @return record offset in from SP
   uint32_t add(WasmType const localType);
-  inline uint32_t getSize() const {
-    return size_;
+  inline uint32_t getAlignedSize() const {
+    constexpr uint32_t alignment = 16U;
+    return (size_ + alignment - 1) & ~(alignment - 1);
   }
-
+  void pushStack(REG const reg);
+  void popStack(REG const reg);
 private:
-  uint32_t size_ = 0U;
+  uint32_t size_;
+  Arm64Backend& backend_;
 
   // Max number of local variables in a function
   static constexpr const uint32_t MAX_LOCAL_VARS = 8U;

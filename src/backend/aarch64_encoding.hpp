@@ -65,5 +65,16 @@ using OPCodeTemplate = uint32_t;
 
 /// @brief LDR R[r], M[ar]. Get 32bits by default
 OPCodeTemplate ldr_ar2r(REG const destReg, REG const addrReg, bool const is64bit);
-
-#endif
+/// @brief ADD R[d], R[s], imm
+OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm);
+/// @brief ADD R[d], R[s], R[imm]
+OPCodeTemplate add_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg);
+/// @brief SUB R[d], R[s], imm
+OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm);
+/// @brief SUB R[d], R[s], R[imm]
+OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg);
+/// @brief Increment SP by imm
+OPCodeTemplate inc_sp(uint32_t const imm);
+/// @brief Decrement SP by imm
+OPCodeTemplate dec_sp(uint32_t const imm);
+#endif // AARCH64_ENCODING_HPP

@@ -192,7 +192,7 @@ void Frontend::parseCodeSection() {
 
     ////// Temporary variables of CURRENT function
     ///< record local's memory addr offset from SP in this function
-    LM lm{};
+    LM lm{backend_};
     ///< checker of local operations
     std::stack<OperandStack::OperandType> validationStack{};
 
@@ -203,8 +203,9 @@ void Frontend::parseCodeSection() {
         funcBody.locals.push_back({false, lm.add(localType), localType});
       }
     }
-    // TODO(): Increase SP.
-    // uint32_t const localMemorySize = lm.getSize();
+    // TODO(): other stack use excluding local
+    uint32_t const stackUsage = lm.getAlignedSize();
+    backend_.emit.append(dec_sp(stackUsage));
 
     std::vector<ModuleInfo::WasmInstruction> instructions{};
     while (true) {
@@ -221,20 +222,21 @@ void Frontend::parseCodeSection() {
         // d6 5f 03 c0
         OPCodeTemplate const insRET = 0xd65f03c0; // little endian for aarch64
         backend_.emit.append(insRET);
-        // MOV R0, M[R28]
+        // prepare return value
+        backend_.emit.append(ldr_ar2r(REG::R0, REG::R28, false));
         break;
       }
       case OPCode::LOCAL_GET: {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
         bool const isI32 = l.type == WasmType::I32;
-        // uint32_t const localSize = isI32 ? 4U : 8U;
+        uint32_t const localSize = isI32 ? 4U : 8U;
         validationStack.push(isI32 ? OperandStack::OperandType::I32 : OperandStack::OperandType::I64);
         if (l.isParam) {
           // param in register. Assumed params <= 8
           assert(localIdx < funcTypeInfo.params.size());
-          // TODO():
           // MOV M[R28], R[i];
+          backend_.emit.append(ldr_)
         } else {
           // local
           // uint32_t const offset2SP = l.offset;
@@ -403,6 +405,7 @@ void Frontend::parseCodeSection() {
 
     funcBody.ins = std::move(instructions);
     module_.functionInfos_.push_back(std::move(funcBody));
+    backend_.emit.append(inc_sp(stackUsage));
   }
 
   assert(funcNumbers == module_.functionInfos_.size() && "parse code functionBodys exception");
