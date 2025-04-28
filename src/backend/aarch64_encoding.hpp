@@ -63,4 +63,7 @@ enum class CC : uint8_t { EQ, NE, CS, HS = CS, CC, LO = CC, MI, PL, VS, VC, HI, 
 ///
 using OPCodeTemplate = uint32_t;
 
+/// @brief LDR R[r], M[ar]. Get 32bits by default
+OPCodeTemplate ldr_ar2r(REG const destReg, REG const addrReg, bool const is64bit);
+
 #endif

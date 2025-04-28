@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -189,7 +190,11 @@ void Frontend::parseCodeSection() {
     uint32_t const localDeclCount = br_.readLEB128<uint32_t>();
     uint32_t localDeclIndex = 0U;
 
-    LM lm{}; // record local's memory addr offset from SP in this function
+    ////// Temporary variables of CURRENT function
+    ///< record local's memory addr offset from SP in this function
+    LM lm{};
+    ///< checker of local operations
+    std::stack<OperandStack::OperandType> validationStack{};
 
     while (localDeclIndex++ < localDeclCount) {
       uint32_t const currentTypeLocalCount = br_.readLEB128<uint32_t>();
@@ -216,6 +221,7 @@ void Frontend::parseCodeSection() {
         // d6 5f 03 c0
         OPCodeTemplate const insRET = 0xd65f03c0; // little endian for aarch64
         backend_.emit.append(insRET);
+        // MOV R0, M[R28]
         break;
       }
       case OPCode::LOCAL_GET: {
@@ -223,7 +229,7 @@ void Frontend::parseCodeSection() {
         auto const &l = funcBody.locals[localIdx];
         bool const isI32 = l.type == WasmType::I32;
         // uint32_t const localSize = isI32 ? 4U : 8U;
-        operandStack_.validationStack_.push(isI32 ? OperandStack::OperandType::I32 : OperandStack::OperandType::I64);
+        validationStack.push(isI32 ? OperandStack::OperandType::I32 : OperandStack::OperandType::I64);
         if (l.isParam) {
           // param in register. Assumed params <= 8
           assert(localIdx < funcTypeInfo.params.size());
@@ -240,10 +246,10 @@ void Frontend::parseCodeSection() {
         break;
       }
       case OPCode::LOCAL_SET: {
-        assert(operandStack_.validationStack_.size() != 0U);
+        assert(validationStack.size() != 0U);
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
-        auto const topType = operandStack_.validationStack_.top();
+        auto const topType = validationStack.top();
         assert(operandStack_.toWasmType(topType) == l.type && "must");
 
         if (l.isParam) {
@@ -256,16 +262,16 @@ void Frontend::parseCodeSection() {
         }
 
         // uint32_t const localSize = l.type == WasmType::I32 ? 4U : 8U;
-        operandStack_.validationStack_.pop();
+        validationStack.pop();
         // TODO():
         // SUB R28, localSize
         break;
       }
       case OPCode::LOCAL_TEE: {
-        assert(operandStack_.validationStack_.size() != 0U);
+        assert(validationStack.size() != 0U);
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
-        auto const topType = operandStack_.validationStack_.top();
+        auto const topType = validationStack.top();
         assert(operandStack_.toWasmType(topType) == l.type && "must");
 
         if (l.isParam) {

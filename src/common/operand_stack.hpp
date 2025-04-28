@@ -2,7 +2,6 @@
 #define SRC_COMMON_OPERAND_STACK_HPP
 
 #include <cstdint>
-#include <stack>
 
 #include "wasm_type.hpp"
 
@@ -26,7 +25,6 @@ public:
       return WasmType::I32;
     }
   }
-  std::stack<OperandType> validationStack_{};
 
 private:
   void *mem_ = nullptr;
