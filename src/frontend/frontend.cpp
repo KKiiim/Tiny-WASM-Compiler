@@ -230,13 +230,13 @@ void Frontend::parseCodeSection() {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
         bool const isI32 = l.type == WasmType::I32;
-        uint32_t const localSize = isI32 ? 4U : 8U;
+        // uint32_t const localSize = isI32 ? 4U : 8U;
         validationStack.push(isI32 ? OperandStack::OperandType::I32 : OperandStack::OperandType::I64);
         if (l.isParam) {
           // param in register. Assumed params <= 8
           assert(localIdx < funcTypeInfo.params.size());
           // MOV M[R28], R[i];
-          backend_.emit.append(ldr_)
+          // backend_.emit.append(ldr_)
         } else {
           // local
           // uint32_t const offset2SP = l.offset;

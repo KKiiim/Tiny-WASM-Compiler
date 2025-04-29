@@ -4,10 +4,11 @@
 #include <cstdint>
 
 #include "../common/wasm_type.hpp"
+#include "../backend/arm64Backend.hpp"
 
 class LM {
 public:
-  LM(Arm64Backend& backend) : size_(0U),backend_(backend) {}
+  explicit LM(Arm64Backend& backend) : size_(0U),backend_(backend) {}
   /// @brief store i32 and i64
   /// @return record offset in from SP
   uint32_t add(WasmType const localType);
