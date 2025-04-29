@@ -65,6 +65,8 @@ using OPCodeTemplate = uint32_t;
 
 /// @brief LDR R[r], M[ar]. Get 32bits by default
 OPCodeTemplate ldr_ar2r(REG const destReg, REG const addrReg, bool const is64bit);
+/// @brief STR M[ar], R[r]. Set 32bits by default
+OPCodeTemplate str_r2ar(REG const addrReg, REG const srcReg, bool const is64bit);
 /// @brief ADD R[d], R[s], imm
 OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm);
 /// @brief ADD R[d], R[s], R[imm]

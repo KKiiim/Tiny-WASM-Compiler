@@ -3,23 +3,16 @@
 // OPCodeTemplate mov_imm2r(REG const destReg, uint64_t const imm, bool const is64bit) {
 //   return 0;
 // }
-OPCodeTemplate ldr_ar2r(REG const destReg, REG const addrReg, bool const is64bit) {
-  OPCodeTemplate opcode = 0;
-  if (is64bit) {
-    // LDR Xt, [Xn]: 0xF8 00 00 00 | (Xn <<5) | Xt
-    opcode = 0xF8400000;
-  } else {
-    // LDR Wt, [Xn]: 0xB8 00 00 00 | (Xn <<5) | Wt
-    opcode = 0xB8400000;
-  }
-  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U); // source 5-9
-  opcode |= static_cast<OPCodeTemplate>(destReg);         // dest 0-4
+OPCodeTemplate str_r2ar(REG const addrReg, REG const srcReg, bool const is64bit) {
+  OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000; // STR Xn/Yn, [Xn/Yn]
+  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U);     // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(addrReg);            // addr 0-4
   return opcode;
 }
-OPCodeTemplate str_imm2ar(REG const addrReg, uint32_t const imm) {
-  OPCodeTemplate opcode = 0xF9000000;                     // STR Xt, [Xn, #imm]
-  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U); // source 5-9
-  opcode |= (imm & 0xFFFU) << 10U;
+OPCodeTemplate ldr_ar2r(REG const destReg, REG const addrReg, bool const is64bit) {
+  OPCodeTemplate opcode = is64bit ? 0xF9400000 : 0xB9400000; // LDR Xd/Yd, [Xn/Yn]
+  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);    // addr 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);            // dest 0-4
   return opcode;
 }
 OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm) {
@@ -37,14 +30,14 @@ OPCodeTemplate add_r_r_immReg(REG const destReg, REG const srcReg, REG const imm
   return opcode;
 }
 OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm) {
-  OPCodeTemplate opcode = 0x2A000000;                    // SUB Xd, Xn, #imm
+  OPCodeTemplate opcode = 0x4A000000;                    // SUB Xd, Xn, #imm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
   opcode |= (imm & 0xFFFU) << 10U;
   return opcode;
 }
 OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg) {
-  OPCodeTemplate opcode = 0x2B000000; // SUB Xd, Xn, Xm
+  OPCodeTemplate opcode = 0x4B000000; // SUB Xd, Xn, Xm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U);
   opcode |= static_cast<OPCodeTemplate>(destReg);
   opcode |= (static_cast<OPCodeTemplate>(immReg) << 16U);
@@ -56,3 +49,10 @@ OPCodeTemplate inc_sp(uint32_t const imm) {
 OPCodeTemplate dec_sp(uint32_t const imm) {
   return sub_r_r_imm(REG::SP, REG::SP, imm);
 }
+// OPCodeTemplate str_sp_imm(REG const srcReg, uint32_t const spOffsetImm, bool const is64bit) {
+//   OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000; // STR Xn, [SP, #imm] for 64-bit or 32-bit
+//   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 10U);    // source register 10-14
+//   opcode |= (spOffsetImm & 0xFFFU) << 10U;                   // immediate offset 10-21
+//   opcode |= (static_cast<OPCodeTemplate>(REG::SP) << 5U);    // SP register as base, 5-9
+//   return opcode;
+// }

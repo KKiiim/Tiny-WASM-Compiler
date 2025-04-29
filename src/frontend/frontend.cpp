@@ -229,22 +229,18 @@ void Frontend::parseCodeSection() {
       case OPCode::LOCAL_GET: {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
-        bool const isI32 = l.type == WasmType::I32;
-        // uint32_t const localSize = isI32 ? 4U : 8U;
-        validationStack.push(isI32 ? OperandStack::OperandType::I32 : OperandStack::OperandType::I64);
+        bool const is64bit = l.type == WasmType::I64;
+        validationStack.push(is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32);
         if (l.isParam) {
           // param in register. Assumed params <= 8
           assert(localIdx < funcTypeInfo.params.size());
-          // MOV M[R28], R[i];
-          // backend_.emit.append(ldr_)
+          lm.push_r_param(localIdx, is64bit);
         } else {
           // local
-          // uint32_t const offset2SP = l.offset;
+          uint32_t const offset2SP = l.offset;
           // TODO():
-          // MOV M[R28], [sp-offset]
+          // store M[R28], [sp+offset]
         }
-        // TODO():
-        // ADD R28, localSize
         break;
       }
       case OPCode::LOCAL_SET: {
