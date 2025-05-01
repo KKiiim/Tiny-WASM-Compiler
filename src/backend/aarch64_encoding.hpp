@@ -79,4 +79,9 @@ OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const imm
 OPCodeTemplate inc_sp(uint32_t const imm);
 /// @brief Decrement SP by imm
 OPCodeTemplate dec_sp(uint32_t const imm);
+/// @brief MOV R[d], R[s]
+OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg);
+/// @brief MOV R[d], imm(64)
+OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm);
+
 #endif // AARCH64_ENCODING_HPP

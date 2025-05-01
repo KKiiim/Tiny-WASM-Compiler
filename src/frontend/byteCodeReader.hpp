@@ -78,8 +78,8 @@ public:
   }
 
 private:
-  std::vector<uint8_t> bytecode_{}; ///> wasm binary code read from .wasm file
-  uint64_t offset_{};               ///> read offset of bytecode_
+  std::vector<uint8_t> bytecode_; ///> wasm binary code read from .wasm file
+  uint64_t offset_{};             ///> read offset of bytecode_
 
   ///
   /// @brief Read a LEB128 integer from the current cursor of the BytecodeReader

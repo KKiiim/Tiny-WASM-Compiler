@@ -49,6 +49,18 @@ OPCodeTemplate inc_sp(uint32_t const imm) {
 OPCodeTemplate dec_sp(uint32_t const imm) {
   return sub_r_r_imm(REG::SP, REG::SP, imm);
 }
+OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg) {
+  OPCodeTemplate opcode = 0x2A0003E0;                    // MOV Xd, Xn
+  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
+  return opcode;
+}
+OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm) {
+  OPCodeTemplate opcode = 0x2A000000;               // MOV Xd, #imm
+  opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
+  opcode |= (imm & 0xFFFU) << 10U;                  // immediate value 10-21
+  return opcode;
+}
 // OPCodeTemplate str_sp_imm(REG const srcReg, uint32_t const spOffsetImm, bool const is64bit) {
 //   OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000; // STR Xn, [SP, #imm] for 64-bit or 32-bit
 //   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 10U);    // source register 10-14

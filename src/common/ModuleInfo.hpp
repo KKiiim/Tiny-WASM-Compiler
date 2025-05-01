@@ -53,11 +53,11 @@ public:
   std::vector<FunctionInfo> functionInfos_;
 
   // type_[i]: signatureIndex i to TypeInfo
-  std::vector<TypeInfo> type_{};
+  std::vector<TypeInfo> type_;
   // func_[i]: functionIndex i to signatureIndex(FuncInfo)
-  std::vector<FuncInfo> func_{};
-  std::vector<ExportInfo> export_{};
-  std::vector<NameInfo> names_{};
+  std::vector<FuncInfo> func_;
+  std::vector<ExportInfo> export_;
+  std::vector<NameInfo> names_;
 };
 
 #endif

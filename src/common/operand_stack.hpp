@@ -2,16 +2,21 @@
 #define SRC_COMMON_OPERAND_STACK_HPP
 
 #include <cstdint>
+#include <cstdlib>
 
+#include "ExecutableMemory.hpp"
+#include "constant.hpp"
+#include "util.hpp"
 #include "wasm_type.hpp"
 
 class OperandStack {
   // R28 -> start | operand stack start address
 
 public:
-  OperandStack() = default;
-  inline void *getStartAddr() {
-    return mem_;
+  OperandStack() : m_(bit_cast<void *>(malloc(DefaultPageSize))), mem_(static_cast<uint8_t *>(m_), DefaultPageSize) {
+  }
+  inline uint64_t getStartAddr() {
+    return mem_.data<uint64_t>();
   }
 
   enum class OperandType : uint8_t { I32 = 0, I64 };
@@ -27,7 +32,8 @@ public:
   }
 
 private:
-  void *mem_ = nullptr;
+  void *m_ = nullptr;
+  ExecutableMemory mem_;
 };
 
 #endif

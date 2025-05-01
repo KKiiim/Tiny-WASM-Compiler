@@ -35,10 +35,10 @@ private:
   ModuleInfo module_;
 
 private:
-  BytecodeReader br_{};
+  BytecodeReader br_;
 
 private:
-  Arm64Backend backend_{};
+  Arm64Backend backend_;
 
   Stack &stack_;
   OperandStack &operandStack_;
