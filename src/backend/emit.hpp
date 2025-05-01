@@ -18,8 +18,6 @@ public:
   ExecutableMemory getExecutableMemory();
 
 private:
-  uint32_t const DefaultPageSize = static_cast<uint32_t>(1000U) * 2U;
-
   uint8_t *data_;
   uint32_t size_;
 };

@@ -18,7 +18,7 @@ jobs:
       # setup environment
       - name: setup ubuntu
         run: |
-          sudo apt-get update && sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make
+          sudo apt-get update && sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make clang-tidy
 
       - name: setup submodule
         run: |

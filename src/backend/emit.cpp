@@ -2,9 +2,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
-#include <string>
 #include <sys/mman.h>
 
+#include "../common/constant.hpp"
 #include "aarch64_encoding.hpp"
 #include "emit.hpp"
 

@@ -8,7 +8,7 @@ public:
   Arm64Backend();
 
 public:
-  Emit emit{};
+  Emit emit;
 };
 
 #endif

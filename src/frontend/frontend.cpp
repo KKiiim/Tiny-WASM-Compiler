@@ -2,17 +2,18 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "../common/util.hpp"
 #include "../common/wasm_type.hpp"
 #include "frontend.hpp"
-#include "localManager.hpp"
+#include "operandManager.hpp"
 
 Frontend::Frontend(std::string const &wasmPath, Stack &stack, OperandStack &operandStack) : stack_(stack), operandStack_(operandStack) {
   br_.readWasmBinary(wasmPath);
+  backend_.emit.append(mov_r_imm(REG::R28, operandStack_.getStartAddr()));
 }
 
 ExecutableMemory Frontend::startCompilation() {
@@ -189,17 +190,24 @@ void Frontend::parseCodeSection() {
     uint32_t const localDeclCount = br_.readLEB128<uint32_t>();
     uint32_t localDeclIndex = 0U;
 
-    LM lm{}; // record local's memory addr offset from SP in this function
+    ////// Temporary variables of CURRENT function
+    ///< record local's memory addr offset from SP in this function
+    ///< handle operand variables
+    // TODO(): should split to different class
+    OP op{backend_};
+    ///< checker of local operations
+    std::stack<OperandStack::OperandType> validationStack{};
 
     while (localDeclIndex++ < localDeclCount) {
       uint32_t const currentTypeLocalCount = br_.readLEB128<uint32_t>();
       WasmType const localType = br_.readByte<WasmType>();
       for (uint32_t i = 0U; i < currentTypeLocalCount; ++i) {
-        funcBody.locals.push_back({false, lm.add(localType), localType});
+        funcBody.locals.push_back({false, op.add(localType), localType});
       }
     }
-    // TODO(): Increase SP.
-    // uint32_t const localMemorySize = lm.getSize();
+    // TODO(): other stack use excluding local
+    uint32_t const stackUsage = op.getAlignedSize();
+    backend_.emit.append(dec_sp(stackUsage));
 
     std::vector<ModuleInfo::WasmInstruction> instructions{};
     while (true) {
@@ -216,67 +224,43 @@ void Frontend::parseCodeSection() {
         // d6 5f 03 c0
         OPCodeTemplate const insRET = 0xd65f03c0; // little endian for aarch64
         backend_.emit.append(insRET);
+        // prepare return value
+        backend_.emit.append(ldr_ar2r(REG::R0, REG::R28, false));
         break;
       }
       case OPCode::LOCAL_GET: {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
-        bool const isI32 = l.type == WasmType::I32;
-        // uint32_t const localSize = isI32 ? 4U : 8U;
-        operandStack_.validationStack_.push(isI32 ? OperandStack::OperandType::I32 : OperandStack::OperandType::I64);
+        bool const is64bit = l.type == WasmType::I64;
+        validationStack.push(is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32);
         if (l.isParam) {
           // param in register. Assumed params <= 8
           assert(localIdx < funcTypeInfo.params.size());
-          // TODO():
-          // MOV M[R28], R[i];
+          op.get_r_param(localIdx, is64bit);
         } else {
           // local
-          // uint32_t const offset2SP = l.offset;
-          // TODO():
-          // MOV M[R28], [sp-offset]
+          uint32_t const offset2SP = l.offset;
+          op.get_ofsp_local(offset2SP, is64bit);
         }
-        // TODO():
-        // ADD R28, localSize
         break;
       }
-      case OPCode::LOCAL_SET: {
-        assert(operandStack_.validationStack_.size() != 0U);
-        uint32_t const localIdx{br_.readLEB128<uint32_t>()};
-        auto const &l = funcBody.locals[localIdx];
-        auto const topType = operandStack_.validationStack_.top();
-        assert(operandStack_.toWasmType(topType) == l.type && "must");
-
-        if (l.isParam) {
-          assert(localIdx < funcTypeInfo.params.size());
-          assert(l.type == funcTypeInfo.params[localIdx]);
-          // TODO(): MOV R[i], M[R28]
-        } else {
-          // uint32_t const offset2SP = l.offset;
-          // TODO(): MOV [sp-offset], M[R28]
-        }
-
-        // uint32_t const localSize = l.type == WasmType::I32 ? 4U : 8U;
-        operandStack_.validationStack_.pop();
-        // TODO():
-        // SUB R28, localSize
-        break;
-      }
+      case OPCode::LOCAL_SET:
       case OPCode::LOCAL_TEE: {
-        assert(operandStack_.validationStack_.size() != 0U);
+        assert(validationStack.size() != 0U);
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
-        auto const topType = operandStack_.validationStack_.top();
+        auto const topType = validationStack.top();
         assert(operandStack_.toWasmType(topType) == l.type && "must");
+        validationStack.pop();
 
         if (l.isParam) {
           assert(localIdx < funcTypeInfo.params.size());
           assert(l.type == funcTypeInfo.params[localIdx]);
-          // TODO(): MOV R[i], M[R28]
+          op.set_r_param(localIdx, topType == OperandStack::OperandType::I64, opcode == OPCode::LOCAL_TEE);
         } else {
-          // uint32_t const offset2SP = l.offset;
-          // TODO(): MOV [sp-offset], M[R28]
+          uint32_t const offset2SP = l.offset;
+          op.set_ofsp_local(offset2SP, topType == OperandStack::OperandType::I64, opcode == OPCode::LOCAL_TEE);
         }
-        // local.tee don't pop local
         break;
       }
       case OPCode::UNREACHABLE:
@@ -397,6 +381,7 @@ void Frontend::parseCodeSection() {
 
     funcBody.ins = std::move(instructions);
     module_.functionInfos_.push_back(std::move(funcBody));
+    backend_.emit.append(inc_sp(stackUsage));
   }
 
   assert(funcNumbers == module_.functionInfos_.size() && "parse code functionBodys exception");
