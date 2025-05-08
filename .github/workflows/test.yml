@@ -14,8 +14,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      # setup environment
       - name: setup ubuntu
         run: |
           sudo apt-get update && sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make clang-tidy
@@ -27,14 +25,9 @@ jobs:
       - name: setup nodejs
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: 23.x
           cache: "npm"
       - run: npm ci
-      - name: setup java
-        uses: actions/setup-java@v3
-        with:
-          java-version: "11"
-          distribution: "temurin"
 
       - name: build demo compiler
         run: npm run build:demo
