@@ -1,8 +1,16 @@
+#include <capstone/capstone.h>
+#include <cstdint>
+#include <iomanip>
+#include <iostream>
+
+#include "../backend/aarch64_encoding.hpp"
 #include "ExecutableMemory.hpp"
+#include "util.hpp"
 
 static constexpr size_t PAGE_SIZE = 4096;
 
 ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
+  rawSize_ = size;
   if (size == 0U) {
     throw std::runtime_error("empty ExecutableMemory");
   }
@@ -13,10 +21,14 @@ ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
   if (mem_ == MAP_FAILED) {
     throw std::runtime_error("mmap failed");
   }
+  if (bit_cast<uintptr_t>(mem_) % 4 != 0) {
+    throw std::runtime_error("Memory is not 4-byte aligned");
+  }
 
   std::memcpy(mem_, data, size);
-  uint8_t *const fillNOPStart = static_cast<uint8_t *>(mem_) + size;
-  std::memset(fillNOPStart, 0x90, alignedSize_ - size); // 0x90: NOP
+  // uint8_t *const fillNOPStart = static_cast<uint8_t *>(mem_) + size;
+  // FIXME(): fill with arm64 NOP
+  // std::memset(fillNOPStart, 0x90, alignedSize_ - size); // 0x90: NOP
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   __builtin___clear_cache(reinterpret_cast<char *>(mem_), reinterpret_cast<char *>(mem_) + alignedSize_);
 }
@@ -25,4 +37,39 @@ ExecutableMemory::~ExecutableMemory() {
   if (mem_ != MAP_FAILED) {
     munmap(mem_, alignedSize_);
   }
+}
+
+void ExecutableMemory::disassemble() const {
+  csh handle;
+  cs_insn *insn;
+  cs_err err;
+
+  if (cs_open(CS_ARCH_ARM64, CS_MODE_ARM, &handle) != CS_ERR_OK) {
+    std::cerr << "Capstone init failed" << std::endl;
+    return;
+  }
+  cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_OFF);
+  cs_option(handle, CS_OPT_DETAIL, CS_OPT_OFF);
+
+  uint32_t mcode = sub_r_r_imm(REG::R2, REG::R3, 4);
+  size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(&mcode), 4U, 0, 0, &insn);
+
+  if (count <= 0) {
+    std::cerr << "disassemble failed" << std::endl;
+    cs_close(&handle);
+    return;
+  }
+
+  std::cout << "Address     | Code      | Instruction\n";
+  std::cout << "----------------------------------------\n";
+  for (size_t i = 0; i < count; i++) {
+    std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << insn[i].address << ": ";
+    for (int j = 0; j < 4; j++) {
+      std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(insn[i].bytes[j]) << " ";
+    }
+    std::cout << " " << std::left << std::setw(8) << std::setfill(' ') << insn[i].mnemonic << insn[i].op_str << std::endl;
+  }
+
+  cs_free(insn, count);
+  cs_close(&handle);
 }

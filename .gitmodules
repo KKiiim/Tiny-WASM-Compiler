@@ -1,3 +1,6 @@
 [submodule "third_party/Tiny-Wasm-Compiler-Learn"]
 	path = third_party/Tiny-Wasm-Compiler-Learn
 	url = https://github.com/Schleifner/Tiny-Wasm-Compiler-Learn.git
+[submodule "third_party/capstone"]
+	path = third_party/capstone
+	url = https://github.com/capstone-engine/capstone.git

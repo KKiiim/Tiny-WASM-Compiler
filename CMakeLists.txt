@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(tiny-wasm-compiler)
-
+set(CMAKE_C_COMPILER "/usr/bin/aarch64-linux-gnu-gcc" CACHE PATH "C compiler")
+set(CMAKE_CXX_COMPILER "/usr/bin/aarch64-linux-gnu-g++" CACHE PATH "C++ compiler")
+set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
-set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
-set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+
+project(tiny-wasm-compiler)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
@@ -19,4 +20,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file ${CMAKE_CURRENT_LIST_DIR}/.clang-tidy "--header-filter=${CMAKE_CURRENT_LIST_DIR}/src/**/.*")
 
+set(CAPSTONE_ARM64_SUPPORT ON CACHE BOOL "Enable ARM64 support")
+foreach(option CAPSTONE_ARM_SUPPORT CAPSTONE_M68K_SUPPORT CAPSTONE_MIPS_SUPPORT CAPSTONE_PPC_SUPPORT CAPSTONE_SPARC_SUPPORT CAPSTONE_SYSZ_SUPPORT CAPSTONE_XCORE_SUPPORT CAPSTONE_X86_SUPPORT CAPSTONE_TMS320C64X_SUPPORT CAPSTONE_M680X_SUPPORT CAPSTONE_EVM_SUPPORT CAPSTONE_MOS65XX_SUPPORT CAPSTONE_WASM_SUPPORT CAPSTONE_BPF_SUPPORT CAPSTONE_RISCV_SUPPORT CAPSTONE_SH_SUPPORT CAPSTONE_TRICORE_SUPPORT)
+    set(${option} OFF CACHE BOOL "Disable ${option}")
+endforeach()
+
+add_subdirectory(third_party/capstone)
 add_subdirectory(demo)
