@@ -18,3 +18,4 @@ LINKDATA
 nonvol
 NUMREGS
 ofsp
+disasm

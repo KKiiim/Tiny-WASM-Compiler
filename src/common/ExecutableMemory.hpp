@@ -14,10 +14,12 @@ public:
     return reinterpret_cast<T>(mem_);
   }
   ~ExecutableMemory();
+  void disassemble() const;
 
 private:
   void *mem_;
   uint32_t alignedSize_;
+  uint32_t rawSize_;
 };
 
 #endif

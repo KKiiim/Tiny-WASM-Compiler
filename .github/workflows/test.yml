@@ -22,7 +22,7 @@ jobs:
 
       - name: setup submodule
         run: |
-          git submodule update --init --depth=1 third_party/Tiny-Wasm-Compiler-Learn
+          git submodule update --init --depth=1
 
       - name: setup nodejs
         uses: actions/setup-node@v3
