@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 
 #include "aarch64_encoding.hpp"
 
@@ -44,7 +45,7 @@ OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const u
   return opcode;
 }
 OPCodeTemplate add_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg) {
-  assert(false);
+  assert(false && "not implemented");
 
   // sf 0 0 01011 sh2 0 Rm imm6 Rn Rd
   // 0000 1011 0000 0000 0000 0000
@@ -70,7 +71,7 @@ OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const i
   return opcode;
 }
 OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg) {
-  assert(false);
+  assert(false && "not implemented");
 
   OPCodeTemplate opcode = 0x4B000000; // SUB Xd, Xn, Xm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U);
@@ -85,16 +86,49 @@ OPCodeTemplate dec_sp(uint32_t const imm) {
   return sub_r_r_imm(REG::SP, REG::SP, imm, true);
 }
 OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg) {
+  assert(false && "not implemented");
+
   // OPCodeTemplate opcode = is64bit ? 0xAA0003E0 : 0x2A0003E0;
   OPCodeTemplate opcode = 0x2A0003E0;                    // MOV Xd, Xn
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
   return opcode;
 }
-OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm) {
-  OPCodeTemplate opcode = 0x2A000000;               // MOV Xd, #imm
+OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm) {
+  // MOV (immediate)
+  // sf 0 0 100101 hw2 imm16 Rd
+  // 0000 0010 100 imm16 00000
+  // 0x2a000000
+  assert(imm <= 0xFFFFU && "Immediate out of range");
+  std::cout << "imm=" << std::hex << imm << std::endl;
+  OPCodeTemplate opcode = 0x2a000000;               // MOV Xd, #imm
   opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
-  opcode |= (imm & 0xFFFU) << 10U;                  // immediate value 10-21
+  opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
+  return opcode;
+}
+OPCodeTemplate movk_r_imm(REG const destReg, uint16_t const imm, uint8_t const shift) {
+}
+/*
+#include<cstdint>
+uint64_t foo( uint64_t a){
+    // a = static_cast<uint64_t>(0x1234123412341234);
+       a = static_cast<uint64_t>(0x1001000100010001);
+    uint64_t addr = *reinterpret_cast<uint64_t *>(a);
+    return addr;
+}
+*/
+OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm) {
+  // MOV (wide immediate)
+  // sf 10(opc) 100101 hw2 imm16 Rd
+  // 1101 0010 100 imm16 00000
+  // 0xd280000
+  // 1011 0010 0000
+  // 1 01 100100
+  assert(imm <= 0xFFFFU && "Immediate out of range");
+  std::cout << "imm=" << std::hex << imm << std::endl;
+  OPCodeTemplate opcode = 0xd2800000;               // MOV Xd, #imm
+  opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
+  opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
   return opcode;
 }
 // OPCodeTemplate str_sp_imm(REG const srcReg, uint32_t const spOffsetImm, bool const is64bit) {

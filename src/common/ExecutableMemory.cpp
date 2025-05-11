@@ -51,8 +51,7 @@ void ExecutableMemory::disassemble() const {
   cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_OFF);
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_OFF);
 
-  uint32_t mcode = sub_r_r_imm(REG::R2, REG::R3, 4, true);
-  size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(&mcode), 4U, 0, 0, &insn);
+  size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(mem_), rawSize_, 0, 0, &insn);
 
   if (count <= 0) {
     std::cerr << "disassemble failed" << std::endl;

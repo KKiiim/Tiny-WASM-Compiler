@@ -81,7 +81,10 @@ OPCodeTemplate inc_sp(uint32_t const imm);
 OPCodeTemplate dec_sp(uint32_t const imm);
 /// @brief MOV R[d], R[s]
 OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg);
-/// @brief MOV R[d], imm(64)
+/// @brief MOV R[d], imm
+/// @note support 64bits imm
 OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm);
+OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm);
+OPCodeTemplate movk_r_imm(REG const destReg, uint16_t const imm, uint8_t const lsl);
 
 #endif // AARCH64_ENCODING_HPP

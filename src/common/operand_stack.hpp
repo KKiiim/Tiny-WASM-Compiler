@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 
 #include "ExecutableMemory.hpp"
 #include "constant.hpp"
@@ -16,6 +17,7 @@ public:
   OperandStack() : m_(bit_cast<void *>(malloc(DefaultPageSize))), mem_(static_cast<uint8_t *>(m_), DefaultPageSize) {
   }
   inline uint64_t getStartAddr() {
+    std::cout << "x28 = " << std::hex << "0x" << mem_.data<uint64_t>() << std::endl;
     return mem_.data<uint64_t>();
   }
 
