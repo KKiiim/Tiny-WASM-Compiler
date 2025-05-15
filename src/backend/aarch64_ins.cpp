@@ -38,7 +38,7 @@ OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const u
   // 11000000
   // shift default set 0
   assert(is64bit && "currently always use full register 64bits");
-  OPCodeTemplate opcode = is64bit ? 0x11000000 : 0x91000000; // ADD Xd, Xn, #imm
+  OPCodeTemplate opcode = is64bit ? 0x91000000 : 0x11000000; // ADD Xd, Xn, #imm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U);     // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);            // dest 0-4
   opcode |= (uimm & 0xFFFU) << 10U;                          // imm12
@@ -100,23 +100,36 @@ OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm) {
   // 0000 0010 100 imm16 00000
   // 0x2a000000
   assert(imm <= 0xFFFFU && "Immediate out of range");
-  std::cout << "imm=" << std::hex << imm << std::endl;
   OPCodeTemplate opcode = 0x2a000000;               // MOV Xd, #imm
   opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
   return opcode;
 }
-OPCodeTemplate movk_r_imm(REG const destReg, uint16_t const imm, uint8_t const shift) {
+OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const shift, bool const is64bit) {
+  /*
+    MOVK (keep)
+    sf 11100101 hw2 imm16 Rd(5)
+    Encoding for the 32-bit variant
+    Applies when (sf == 0 && hw == 0x)
+    MOVK <Wd>, #<imm>{, LSL #<shift>}
+
+    Encoding for the 64-bit variant
+    Applies when (sf == 1) => f2800000
+    MOVK <Xd>, #<imm>{, LSL #<shift>}
+
+    <shift>
+  "32-bit": 0 (the default) or 16, encoded in the "hw" field as <shift>/16.
+  "64-bit": 0 (the default), 16, 32 or 48, encoded in the "hw" field as <shift>/16.
+  */
+  assert(is64bit && "currently always use full register 64bits");
+  assert(imm <= 0xFFFFU && "Immediate out of range");
+  assert(shift <= 3U && "Shift out of range");
+  OPCodeTemplate opcode = 0xf2800000;               // MOV Xd, #imm
+  opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
+  opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
+  opcode |= (shift & 0x3U) << 21U;                  // shift value 21-22
+  return opcode;
 }
-/*
-#include<cstdint>
-uint64_t foo( uint64_t a){
-    // a = static_cast<uint64_t>(0x1234123412341234);
-       a = static_cast<uint64_t>(0x1001000100010001);
-    uint64_t addr = *reinterpret_cast<uint64_t *>(a);
-    return addr;
-}
-*/
 OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm) {
   // MOV (wide immediate)
   // sf 10(opc) 100101 hw2 imm16 Rd
@@ -125,7 +138,6 @@ OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm) {
   // 1011 0010 0000
   // 1 01 100100
   assert(imm <= 0xFFFFU && "Immediate out of range");
-  std::cout << "imm=" << std::hex << imm << std::endl;
   OPCodeTemplate opcode = 0xd2800000;               // MOV Xd, #imm
   opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20

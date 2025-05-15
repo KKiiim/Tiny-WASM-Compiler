@@ -13,7 +13,7 @@
 
 Frontend::Frontend(std::string const &wasmPath, Stack &stack, OperandStack &operandStack) : stack_(stack), operandStack_(operandStack) {
   br_.readWasmBinary(wasmPath);
-  backend_.emit.append(mov_r_imm(REG::R28, operandStack_.getStartAddr()));
+  backend_.emit.emit_mov_r_imm64(REG::R28, operandStack_.getStartAddr());
 }
 
 ExecutableMemory Frontend::startCompilation() {
@@ -80,7 +80,7 @@ ExecutableMemory Frontend::startCompilation() {
   // compile();
   std::cout << "compile to machine code success" << std::endl;
 
-  logParsedInfo();
+  // logParsedInfo();
 
   return backend_.emit.getExecutableMemory();
 }

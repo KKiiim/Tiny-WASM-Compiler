@@ -85,6 +85,6 @@ OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg);
 /// @note support 64bits imm
 OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm);
 OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm);
-OPCodeTemplate movk_r_imm(REG const destReg, uint16_t const imm, uint8_t const lsl);
+OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const shift, bool const is64bit);
 
 #endif // AARCH64_ENCODING_HPP

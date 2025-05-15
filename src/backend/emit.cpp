@@ -35,3 +35,10 @@ void Emit::append(OPCodeTemplate const ins) {
 ExecutableMemory Emit::getExecutableMemory() {
   return ExecutableMemory{data_, size_};
 }
+
+void Emit::emit_mov_r_imm64(REG const destReg, uint64_t const imm) {
+  append(mov_r_imm(destReg, imm & 0xFFFFU));
+  append(movk_r_imm16(destReg, (imm >> 16U) & 0xFFFFU, 1, true));
+  append(movk_r_imm16(destReg, (imm >> 32U) & 0xFFFFU, 2, true));
+  append(movk_r_imm16(destReg, (imm >> 48U) & 0xFFFFU, 3, true));
+}
