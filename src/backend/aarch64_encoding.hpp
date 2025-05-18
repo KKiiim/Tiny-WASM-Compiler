@@ -63,6 +63,7 @@ enum class CC : uint8_t { EQ, NE, CS, HS = CS, CC, LO = CC, MI, PL, VS, VC, HI, 
 ///
 using OPCodeTemplate = uint32_t;
 
+uint8_t constexpr const MaxPositiveImmForLdrStr = 0xFFU;
 /// @brief LDR R[r], M[ar]. Get 32bits by default
 OPCodeTemplate ldr_simm_ar2r(REG const destReg, REG const addrReg, int32_t const offset, bool const is64bit);
 /// @brief STR M[ar], R[r]. Set 32bits by default

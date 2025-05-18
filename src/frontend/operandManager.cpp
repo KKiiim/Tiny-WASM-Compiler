@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 
 #include "operandManager.hpp"
@@ -42,9 +43,8 @@ void OP::set_r_param(uint32_t const paramIndex, bool const is64bit, bool const i
 }
 void OP::get_ofsp_local(uint32_t const offset2SP, bool const is64bit) {
   // Use R9 as scratch register
-  std::cout << "get_ofsp_local offset2SP " << offset2SP << std::endl;
-  backend_.emit.append(add_r_r_imm(REG::R9, REG::SP, offset2SP, true));
-  backend_.emit.append(ldr_simm_ar2r(REG::R9, REG::R9, 0U, is64bit));
+  assert(offset2SP <= MaxPositiveImmForLdrStr && "offset2SP too large");
+  backend_.emit.append(ldr_simm_ar2r(REG::R9, REG::SP, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit));
   backend_.emit.append(str_r2ar_simm(ROP, REG::R9, 0U, is64bit));
   backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
 }
@@ -53,6 +53,6 @@ void OP::set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const
   if (!isTee) {
     backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
   }
-  backend_.emit.append(add_r_r_imm(REG::R9, REG::SP, offset2SP, true));
-  backend_.emit.append(str_r2ar_simm(REG::R9, ROP, 0U, is64bit));
+  assert(offset2SP <= MaxPositiveImmForLdrStr && "offset2SP too large");
+  backend_.emit.append(str_r2ar_simm(REG::SP, ROP, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit));
 }
