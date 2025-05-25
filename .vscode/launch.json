@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "QEMU Remote Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "build/demo/Compiler",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch", // sudo apt install gdb-multiarch
+            "miDebuggerServerAddress": "localhost:123456",
+            "stopAtEntry": true,
+            "setupCommands": [
+                {
+                    "text": "-enable-pretty-printing"
+                }
+            ],
+            "externalConsole": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "targetArchitecture": "arm"
+        }
+    ]
+}

@@ -1,4 +1,4 @@
 node_modules
 a.out
-.vscode
 build
+.cache
