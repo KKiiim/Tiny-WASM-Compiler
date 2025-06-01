@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <stdexcept>
 #include <sys/mman.h>
 

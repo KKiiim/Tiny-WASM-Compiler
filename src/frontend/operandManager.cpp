@@ -1,6 +1,5 @@
 #include <cassert>
 #include <cstdint>
-#include <iostream>
 
 #include "operandManager.hpp"
 

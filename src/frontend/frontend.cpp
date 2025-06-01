@@ -216,15 +216,12 @@ void Frontend::parseCodeSection() {
       if (opcode == OPCode::END) {
         break;
       }
-      if (opcode == OPCode::RETURN) {
-        break;
-      }
       ins.opCode = opcode;
       instructions.push_back(ins);
 
       switch (opcode) {
       case OPCode::RETURN: {
-        assert(false && "RETURN opcode should not be here");
+        // do check after END
         break;
       }
       case OPCode::LOCAL_GET: {

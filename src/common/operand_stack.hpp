@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
 
 #include "ExecutableMemory.hpp"
 #include "constant.hpp"

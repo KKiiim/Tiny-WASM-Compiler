@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "build/demo/Compiler",
-      "miDebuggerPath": "/usr/bin/gdb-multiarch", // sudo apt install gdb-multiarch
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
       "miDebuggerServerAddress": "localhost:123456",
       "stopAtEntry": true,
       "setupCommands": [

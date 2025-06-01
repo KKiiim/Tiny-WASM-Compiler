@@ -1,12 +1,7 @@
 #include <cassert>
 #include <cstdint>
-#include <iostream>
 
 #include "aarch64_encoding.hpp"
-
-// Load/Store Offset
-// assert(imm >= -256 && imm <= 255 && "Immediate out of range");
-// opcode_ |= (bit_cast<uint32_t>(imm) & 0x1FFU) << 12U;
 
 OPCodeTemplate str_r2ar_simm(REG const addrReg, REG const srcReg, int32_t const offset, bool const is64bit) {
   // 1x 111 000000 imm9 01 Rn Rt
