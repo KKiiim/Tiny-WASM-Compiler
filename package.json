@@ -9,8 +9,8 @@
     "check:clang-format": "find src -regex \".*\\.\\(cpp\\|hpp\\|c\\|h\\)\" | xargs clang-format -style=file --Werror --dry-run",
     "check:all": "npm run check:prettier && npm run check:cspell && npm run check:clang-format",
     "fix:prettier": "prettier -c --write .",
-    "build:demo": "mkdir -p build && cd build && cmake .. && make -j && cd ..",
-    "launch:qemu:debug": "sudo qemu-aarch64 -g 123456 -L /usr/aarch64-linux-gnu ./build/demo/Compiler chapters/Chapter02/local.0.wasm",
+    "build:demo": "mkdir -p build && cd build && cmake -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc  -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ .. && make -j && cd ..",
+    "launch:qemu:debug": "qemu-aarch64 -g 123456 -L /usr/aarch64-linux-gnu ./build/demo/Compiler chapters/Chapter02/local.0.wasm",
     "test:c1": "qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/demo/Compiler chapters/Chapter01/add.wasm",
     "test:c2": "qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/demo/Compiler chapters/Chapter02/local.0.wasm",
     "preCommit": "npm run check:all && npm run build:demo"

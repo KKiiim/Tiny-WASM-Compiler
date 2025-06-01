@@ -77,9 +77,6 @@ ExecutableMemory Frontend::startCompilation() {
   }
   std::cout << "parse wasm success" << std::endl;
 
-  // compile();
-  std::cout << "compile to machine code success" << std::endl;
-
   // logParsedInfo();
 
   return backend_.emit.getExecutableMemory();
@@ -219,17 +216,15 @@ void Frontend::parseCodeSection() {
       if (opcode == OPCode::END) {
         break;
       }
+      if (opcode == OPCode::RETURN) {
+        break;
+      }
       ins.opCode = opcode;
       instructions.push_back(ins);
 
       switch (opcode) {
       case OPCode::RETURN: {
-        OPCodeTemplate const insRET = 0xc0035fd6; // big endian
-        backend_.emit.append(insRET);
-        if (funcTypeInfo.results.size() == 1U) {
-          // prepare return value
-          backend_.emit.append(ldr_simm_ar2r(REG::R0, REG::R28, 0U, false));
-        }
+        assert(false && "RETURN opcode should not be here");
         break;
       }
       case OPCode::LOCAL_GET: {
@@ -388,6 +383,18 @@ void Frontend::parseCodeSection() {
     if (stackUsage != 0U) {
       backend_.emit.append(inc_sp(stackUsage));
     }
+
+    if (funcTypeInfo.results.size() == 1U) {
+      // prepare return value
+      backend_.emit.append(ldr_simm_ar2r(REG::R0, REG::R28, 0U, false));
+      assert(validationStack.size() == 1U && "validation stack should have one element for return value");
+      assert(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0] && "validation stack top should be the return value type");
+      op.drop(funcTypeInfo.results[0] == WasmType::I64);
+      validationStack.pop();
+    }
+    assert(validationStack.empty() && "validation stack should be empty after parsing function body");
+    OPCodeTemplate const insRET = 0xd65f03c0; // big endian
+    backend_.emit.append(insRET);
   }
 
   assert(funcNumbers == module_.functionInfos_.size() && "parse code functionBodys exception");
@@ -399,13 +406,6 @@ void Frontend::parseNameSection() {
   //   name += static_cast<char>(br_.readByte());
   // }
 }
-// void Frontend::compile() {
-//   for (auto const &func : functionInfos_) {
-//     static_cast<void>(func.bodySize);
-//     // not supported yet
-//     static_cast<void>(func.localDeclCount);
-//   }
-// }
 
 void Frontend::logParsedInfo() {
   LOGGER << "========================= type section =========================" << LOGGER_END;

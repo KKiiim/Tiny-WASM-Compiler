@@ -21,7 +21,7 @@ public:
   }
 
   enum class OperandType : uint8_t { I32 = 0, I64 };
-  WasmType toWasmType(OperandType const tOperand) const {
+  static WasmType toWasmType(OperandType const tOperand) {
     switch (tOperand) {
     case OperandType::I32:
       return WasmType::I32;

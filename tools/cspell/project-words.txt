@@ -21,3 +21,5 @@ ofsp
 disasm
 simm
 uimm
+movk
+MOVK

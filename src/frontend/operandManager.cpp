@@ -56,3 +56,6 @@ void OP::set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const
   assert(offset2SP <= MaxPositiveImmForLdrStr && "offset2SP too large");
   backend_.emit.append(str_r2ar_simm(REG::SP, ROP, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit));
 }
+void OP::drop(bool const is64bit) {
+  backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+}
