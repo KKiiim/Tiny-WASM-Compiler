@@ -7,5 +7,5 @@ ExecutableMemory Compiler::compile(std::string const &wasmPath) {
 }
 
 void Compiler::initRuntime() {
-  // LDR r28, &operandStack_ in frontend constructor
+  static_cast<void>(this);
 }

@@ -8,9 +8,9 @@ int main(int argc, char *argv[]) {
   Compiler compiler;
 
   ExecutableMemory const execMemory = compiler.compile(argv[1]);
+  execMemory.disassemble();
   compiler.initRuntime();
 
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   void (*const func)() = execMemory.data<void (*)()>();
   func();
 

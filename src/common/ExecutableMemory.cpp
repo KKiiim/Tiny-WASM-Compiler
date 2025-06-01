@@ -28,7 +28,7 @@ ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
   std::memcpy(mem_, data, size);
   // uint8_t *const fillNOPStart = static_cast<uint8_t *>(mem_) + size;
   // FIXME(): fill with arm64 NOP
-  // std::memset(fillNOPStart, 0x90, alignedSize_ - size); // 0x90: NOP
+  // std::memset(fillNOPStart, nop, alignedSize_ - size);
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   __builtin___clear_cache(reinterpret_cast<char *>(mem_), reinterpret_cast<char *>(mem_) + alignedSize_);
 }
@@ -51,8 +51,7 @@ void ExecutableMemory::disassemble() const {
   cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_OFF);
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_OFF);
 
-  uint32_t mcode = sub_r_r_imm(REG::R2, REG::R3, 4);
-  size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(&mcode), 4U, 0, 0, &insn);
+  size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(mem_), rawSize_, 0, 0, &insn);
 
   if (count <= 0) {
     std::cerr << "disassemble failed" << std::endl;

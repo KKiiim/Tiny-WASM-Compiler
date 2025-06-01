@@ -13,7 +13,7 @@
 
 Frontend::Frontend(std::string const &wasmPath, Stack &stack, OperandStack &operandStack) : stack_(stack), operandStack_(operandStack) {
   br_.readWasmBinary(wasmPath);
-  backend_.emit.append(mov_r_imm(REG::R28, operandStack_.getStartAddr()));
+  backend_.emit.emit_mov_r_imm64(REG::R28, operandStack_.getStartAddr());
 }
 
 ExecutableMemory Frontend::startCompilation() {
@@ -77,10 +77,7 @@ ExecutableMemory Frontend::startCompilation() {
   }
   std::cout << "parse wasm success" << std::endl;
 
-  // compile();
-  std::cout << "compile to machine code success" << std::endl;
-
-  logParsedInfo();
+  // logParsedInfo();
 
   return backend_.emit.getExecutableMemory();
 }
@@ -131,6 +128,7 @@ void Frontend::parseTypeSection() {
       resultInfos.push_back(br_.readByte<WasmType>());
     }
     assert(resultNum == resultInfos.size() && "must");
+    assert(resultInfos.size() <= 1U && "only one result supported");
 
     module_.type_.push_back({paramInfos, resultInfos});
   }
@@ -207,8 +205,10 @@ void Frontend::parseCodeSection() {
     }
     // TODO(): other stack use excluding local
     uint32_t const stackUsage = op.getAlignedSize();
-    backend_.emit.append(dec_sp(stackUsage));
-
+    std::cout << "stackUsage = " << stackUsage << std::endl;
+    if (stackUsage != 0U) {
+      backend_.emit.append(dec_sp(stackUsage));
+    }
     std::vector<ModuleInfo::WasmInstruction> instructions{};
     while (true) {
       ModuleInfo::WasmInstruction ins{};
@@ -221,11 +221,7 @@ void Frontend::parseCodeSection() {
 
       switch (opcode) {
       case OPCode::RETURN: {
-        // d6 5f 03 c0
-        OPCodeTemplate const insRET = 0xd65f03c0; // little endian for aarch64
-        backend_.emit.append(insRET);
-        // prepare return value
-        backend_.emit.append(ldr_ar2r(REG::R0, REG::R28, false));
+        // do check after END
         break;
       }
       case OPCode::LOCAL_GET: {
@@ -381,7 +377,21 @@ void Frontend::parseCodeSection() {
 
     funcBody.ins = std::move(instructions);
     module_.functionInfos_.push_back(std::move(funcBody));
-    backend_.emit.append(inc_sp(stackUsage));
+    if (stackUsage != 0U) {
+      backend_.emit.append(inc_sp(stackUsage));
+    }
+
+    if (funcTypeInfo.results.size() == 1U) {
+      // prepare return value
+      backend_.emit.append(ldr_simm_ar2r(REG::R0, REG::R28, 0U, false));
+      assert(validationStack.size() == 1U && "validation stack should have one element for return value");
+      assert(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0] && "validation stack top should be the return value type");
+      op.drop(funcTypeInfo.results[0] == WasmType::I64);
+      validationStack.pop();
+    }
+    assert(validationStack.empty() && "validation stack should be empty after parsing function body");
+    OPCodeTemplate const insRET = 0xd65f03c0; // big endian
+    backend_.emit.append(insRET);
   }
 
   assert(funcNumbers == module_.functionInfos_.size() && "parse code functionBodys exception");
@@ -393,13 +403,6 @@ void Frontend::parseNameSection() {
   //   name += static_cast<char>(br_.readByte());
   // }
 }
-// void Frontend::compile() {
-//   for (auto const &func : functionInfos_) {
-//     static_cast<void>(func.bodySize);
-//     // not supported yet
-//     static_cast<void>(func.localDeclCount);
-//   }
-// }
 
 void Frontend::logParsedInfo() {
   LOGGER << "========================= type section =========================" << LOGGER_END;
