@@ -31,12 +31,12 @@ uint32_t OP::add(WasmType const localType) {
 // TODO(): Stupid and inefficient implementation, but simple, let's do it this way first
 
 void OP::get_r_param(uint32_t const paramIndex, bool const is64bit) {
-  backend_.emit.append(ldr_simm_ar2r(ROP, static_cast<REG>(paramIndex), 0U, is64bit));
-  backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 4U : 8U, true));
+  backend_.emit.append(str_r2ar_simm(ROP, static_cast<REG>(paramIndex), 0U, is64bit));
+  backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
 }
 void OP::set_r_param(uint32_t const paramIndex, bool const is64bit, bool const isTee = false) {
   if (!isTee) {
-    backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 4U : 8U, true));
+    backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
   }
   backend_.emit.append(str_r2ar_simm(static_cast<REG>(paramIndex), ROP, 0U, is64bit));
 }
@@ -53,8 +53,9 @@ void OP::set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const
     backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
   }
   assert(offset2SP <= MaxPositiveImmForLdrStr && "offset2SP too large");
-  backend_.emit.append(str_r2ar_simm(REG::SP, ROP, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit));
+  backend_.emit.append(ldr_simm_ar2r(REG::R9, ROP, 0U, is64bit));
+  backend_.emit.append(str_r2ar_simm(REG::SP, REG::R9, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit));
 }
-void OP::drop(bool const is64bit) {
+void OP::subROP(bool const is64bit) {
   backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
 }

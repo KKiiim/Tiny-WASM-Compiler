@@ -7,17 +7,19 @@
 
 #include "../backend/arm64Backend.hpp"
 #include "../common/ModuleInfo.hpp"
+#include "../common/operand_stack.hpp"
+#include "../common/stack.hpp"
 #include "../common/wasm_type.hpp"
-#include "../compiler.hpp"
 #include "../frontend/byteCodeReader.hpp"
 
 #define LOGGER std::cout
 #define LOGGER_END std::endl
 class Frontend {
 public:
-  explicit Frontend(std::string const &wasmPath, Stack &stack, OperandStack &operandStack);
+  explicit Frontend(ModuleInfo &module, Stack &stack, OperandStack &operandStack) : module_(module), stack_(stack), operandStack_(operandStack) {
+  }
 
-  ExecutableMemory startCompilation();
+  ExecutableMemory startCompilation(std::string const &wasmPath);
   void logParsedInfo();
 
 private:
@@ -32,7 +34,7 @@ private:
   void compile();
 
 private:
-  ModuleInfo module_;
+  ModuleInfo &module_;
 
 private:
   BytecodeReader br_;

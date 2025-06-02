@@ -11,12 +11,9 @@
 #include "frontend.hpp"
 #include "operandManager.hpp"
 
-Frontend::Frontend(std::string const &wasmPath, Stack &stack, OperandStack &operandStack) : stack_(stack), operandStack_(operandStack) {
+ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
   br_.readWasmBinary(wasmPath);
-  backend_.emit.emit_mov_r_imm64(REG::R28, operandStack_.getStartAddr());
-}
 
-ExecutableMemory Frontend::startCompilation() {
   validateMagicNumber();
   validateVersion();
   std::cout << "validate success" << std::endl;
@@ -157,7 +154,11 @@ void Frontend::parseExportSection() {
 
     WasmImportExportType const type{br_.readByte<WasmImportExportType>()};
     uint32_t const index = br_.readLEB128<uint32_t>();
+
+    assert(type == WasmImportExportType::FUNC && "only function export supported yet");
+
     module_.export_.push_back({exportName, type, index});
+    module_.exportFuncNameToIndex_[exportName] = index;
   }
 }
 void Frontend::parseCodeSection() {
@@ -171,6 +172,7 @@ void Frontend::parseCodeSection() {
     counter++;
 
     ModuleInfo::FunctionInfo funcBody{};
+    funcBody.startAddressOffset = backend_.emit.getCurrentOffset();
     funcBody.paramsNumber = funcTypeInfo.params.size();
     uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
     funcBody.bodySize = funcBodySize;
@@ -377,17 +379,20 @@ void Frontend::parseCodeSection() {
 
     funcBody.ins = std::move(instructions);
     module_.functionInfos_.push_back(std::move(funcBody));
+    assert(module_.functionInfos_.size() == funcSignatureIndex + 1U);
+
     if (stackUsage != 0U) {
       backend_.emit.append(inc_sp(stackUsage));
     }
 
     if (funcTypeInfo.results.size() == 1U) {
-      // prepare return value
-      backend_.emit.append(ldr_simm_ar2r(REG::R0, REG::R28, 0U, false));
       assert(validationStack.size() == 1U && "validation stack should have one element for return value");
       assert(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0] && "validation stack top should be the return value type");
-      op.drop(funcTypeInfo.results[0] == WasmType::I64);
       validationStack.pop();
+
+      // prepare return value
+      op.subROP(funcTypeInfo.results[0] == WasmType::I64);
+      backend_.emit.append(ldr_simm_ar2r(REG::R0, REG::R28, 0U, false));
     }
     assert(validationStack.empty() && "validation stack should be empty after parsing function body");
     OPCodeTemplate const insRET = 0xd65f03c0; // big endian
@@ -417,7 +422,7 @@ void Frontend::logParsedInfo() {
   LOGGER << "========================= export section =========================" << LOGGER_END;
   for (uint32_t i = 0; i < module_.export_.size(); i++) {
     LOGGER << "export[" << i << "] name:\"" << module_.export_[i].exportName << "\" type = " << static_cast<uint32_t>(module_.export_[i].type)
-           << " index = " << module_.export_[i].index << LOGGER_END;
+           << " index = " << module_.export_[i].funcIndex << LOGGER_END;
   }
   LOGGER << "========================= code section =========================" << LOGGER_END;
   LOGGER << "function number = " << module_.functionInfos_.size() << LOGGER_END;
