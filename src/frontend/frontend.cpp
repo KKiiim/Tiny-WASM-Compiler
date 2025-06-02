@@ -172,7 +172,7 @@ void Frontend::parseCodeSection() {
     counter++;
 
     ModuleInfo::FunctionInfo funcBody{};
-    funcBody.startAddressOffset = backend_.emit.getSize();
+    funcBody.startAddressOffset = backend_.emit.getCurrentOffset();
     funcBody.paramsNumber = funcTypeInfo.params.size();
     uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
     funcBody.bodySize = funcBodySize;

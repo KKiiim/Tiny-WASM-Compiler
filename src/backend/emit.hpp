@@ -16,7 +16,7 @@ public:
 
   void append(OPCodeTemplate const ins);
   ExecutableMemory getExecutableMemory();
-  uint32_t getSize() const {
+  uint32_t getCurrentOffset() const {
     return size_;
   }
 

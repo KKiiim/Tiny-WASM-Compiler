@@ -41,7 +41,7 @@ public:
     uint32_t paramsNumber;
     std::vector<LocalInfo> locals; // params and locals
     std::vector<WasmInstruction> ins;
-    uint64_t startAddressOffset; ///< Bytes offset from the start of the executable memory
+    uint32_t startAddressOffset; ///< Bytes offset from the start of the executable memory
   };
   struct NameInfo {
     std::string name;
