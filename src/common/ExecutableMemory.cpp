@@ -24,6 +24,7 @@ ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
   if (bit_cast<uintptr_t>(mem_) % 4 != 0) {
     throw std::runtime_error("Memory is not 4-byte aligned");
   }
+  std::cout << "mmap address: " << std::hex << bit_cast<uintptr_t>(mem_) << std::dec << std::endl;
 
   std::memcpy(mem_, data, size);
   // uint8_t *const fillNOPStart = static_cast<uint8_t *>(mem_) + size;
@@ -71,4 +72,27 @@ void ExecutableMemory::disassemble() const {
 
   cs_free(insn, count);
   cs_close(&handle);
+}
+
+ExecutableMemory::ExecutableMemory(ExecutableMemory &&other) noexcept : mem_(other.mem_), alignedSize_(other.alignedSize_), rawSize_(other.rawSize_) {
+  other.mem_ = nullptr;
+  other.alignedSize_ = 0;
+  other.rawSize_ = 0;
+}
+
+ExecutableMemory &ExecutableMemory::operator=(ExecutableMemory &&other) noexcept {
+  if (this != &other) {
+    if (mem_ != nullptr) {
+      munmap(mem_, alignedSize_);
+    }
+
+    mem_ = other.mem_;
+    alignedSize_ = other.alignedSize_;
+    rawSize_ = other.rawSize_;
+
+    other.mem_ = nullptr;
+    other.alignedSize_ = 0;
+    other.rawSize_ = 0;
+  }
+  return *this;
 }

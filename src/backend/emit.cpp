@@ -32,6 +32,9 @@ void Emit::append(OPCodeTemplate const ins) {
 }
 
 ExecutableMemory Emit::getExecutableMemory() {
+  // Use it very carefully, ExecutableMemory is return as a temporary object.
+  // Use like: emit.getExecutableMemory().data<void (*)()>() and call it may failed because
+  // munmap will be called in its destructor
   return ExecutableMemory{data_, size_};
 }
 

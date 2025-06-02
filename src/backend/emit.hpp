@@ -16,6 +16,9 @@ public:
 
   void append(OPCodeTemplate const ins);
   ExecutableMemory getExecutableMemory();
+  uint32_t getSize() const {
+    return size_;
+  }
 
   void emit_mov_r_imm64(REG const destReg, uint64_t const imm);
 

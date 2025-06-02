@@ -30,7 +30,7 @@ public:
   /// @brief Pop local variable from the operand stack
   void set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const isTee);
   /// @brief drop a value from the operand stack
-  void drop(bool const is64bit);
+  void subROP(bool const is64bit);
 
 private:
   uint32_t size_;
