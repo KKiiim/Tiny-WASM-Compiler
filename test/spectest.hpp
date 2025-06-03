@@ -1,4 +1,0 @@
-#ifndef TEST_SPECTEST_HPP
-#define TEST_SPECTEST_HPP
-
-#endif // TEST_SPECTEST_HPP

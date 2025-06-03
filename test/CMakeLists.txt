@@ -1,3 +1,5 @@
+find_package(GTest REQUIRED)
+
 file(GLOB SRC_FILES
     ${CMAKE_CURRENT_LIST_DIR}/../src/backend/*.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/common/*.cpp
@@ -8,5 +10,14 @@ file(GLOB SRC_FILES
 )
 
 add_executable(Spectest ${SRC_FILES})
-target_link_libraries(Spectest capstone)
-target_include_directories(Spectest PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../third_party/capstone/include)
+
+target_include_directories(Spectest PRIVATE 
+    ${CMAKE_CURRENT_LIST_DIR}/../third_party/capstone/include
+    ${CMAKE_CURRENT_LIST_DIR}/../third_party/googletest/googletest/include
+)
+
+target_link_libraries(Spectest 
+    capstone
+    GTest::gtest GTest::gtest_main
+    pthread
+)

@@ -29,3 +29,4 @@ endforeach()
 
 add_subdirectory(third_party/capstone)
 add_subdirectory(demo)
+add_subdirectory(test)
