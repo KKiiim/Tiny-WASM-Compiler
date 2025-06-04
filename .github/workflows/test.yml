@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit-test:
+  spectest:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,10 +22,6 @@ jobs:
         run: |
           git submodule update --init --depth=1
 
-      - name: build arm gtest
-        run: |
-          cd third_party/googletest && mkdir build && cd build && cmake .. -DMAKE_INSTALL_PREFIX=./_install -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc && make -j && sudo make install
-
       - name: setup nodejs
         uses: actions/setup-node@v3
         with:
@@ -33,9 +29,12 @@ jobs:
           cache: "npm"
       - run: npm ci
 
-      - name: build demo compiler
-        run: npm run build:demo
-
-      - name: test chapters
+      - name: demo test chapters
         run: |
+          npm run build:demo
           npm run test:c2
+
+      - name: gtest spec
+        run: |
+          npm run build:spectest
+          qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/bin/Spectest
