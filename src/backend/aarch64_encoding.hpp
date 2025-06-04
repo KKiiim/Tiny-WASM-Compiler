@@ -65,10 +65,10 @@ using OPCodeTemplate = uint32_t;
 
 /// @brief 9 bits signed immediate for LDR/STR instructions, max value is 255
 uint8_t constexpr const MaxPositiveImmForLdrStr = 0xFFU;
-/// @brief LDR R[r], M[ar]. Get 32bits by default
-OPCodeTemplate ldr_simm_ar2r(REG const destReg, REG const addrReg, int32_t const offset, bool const is64bit);
-/// @brief STR M[ar], R[r]. Set 32bits by default
-OPCodeTemplate str_r2ar_simm(REG const addrReg, REG const srcReg, int32_t const offset, bool const is64bit);
+/// @brief LDR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
+OPCodeTemplate ldr_base_off(REG const destReg, REG const addrReg, uint32_t const offset, bool const is64bit);
+/// @brief STR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
+OPCodeTemplate str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit);
 /// @brief ADD R[d], R[s], imm
 OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit);
 /// @brief ADD R[d], R[s], R[imm]

@@ -393,7 +393,7 @@ void Frontend::parseCodeSection() {
 
       // prepare return value
       op.subROP(funcTypeInfo.results[0] == WasmType::I64);
-      backend_.emit.append(ldr_simm_ar2r(REG::R0, REG::R28, 0U, false));
+      backend_.emit.append(ldr_base_off(REG::R0, REG::R28, 0U, false));
     }
     assert(validationStack.empty() && "validation stack should be empty after parsing function body");
     OPCodeTemplate const insRET = 0xd65f03c0; // big endian

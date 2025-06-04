@@ -27,7 +27,7 @@ public:
   }
 
   void emit_mov_r_imm64(REG const destReg, uint64_t const imm);
-  void decreaseSPWithClean(uint32_t const size);
+  void decreaseSPWithClean(uint32_t const bytes);
 
 private:
   uint8_t *data_;

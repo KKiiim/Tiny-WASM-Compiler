@@ -6,7 +6,7 @@
 
 TEST(Chapter02, Local0wasm) {
   Compiler compiler;
-  ExecutableMemory const &execMemory = compiler.compile("/home/kim/work/kkiiim/Tiny-WASM-Compiler/chapters/Chapter02/local.0.wasm");
+  ExecutableMemory const &execMemory = compiler.compile("chapters/Chapter02/local.0.wasm");
 
   uint32_t ret32 = compiler.singleCallByName<uint32_t>("type-local-i32", "i()");
   EXPECT_EQ(ret32, 0U);
