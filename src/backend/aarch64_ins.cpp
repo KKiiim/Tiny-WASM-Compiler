@@ -3,28 +3,36 @@
 
 #include "aarch64_encoding.hpp"
 
-OPCodeTemplate str_r2ar_simm(REG const addrReg, REG const srcReg, int32_t const offset, bool const is64bit) {
-  // 1x 111 000000 imm9 01 Rn Rt
-  // 1111 1000 000 imm9 0100 0000 0000
-  // F8000400
-  assert(offset >= -256 && offset <= 255 && "Immediate out of range");
-  OPCodeTemplate opcode = is64bit ? 0xF8000400 : 0xB8000400;
+OPCodeTemplate str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit) {
+  // Encoding for the 32-bit variant
+  // Applies when (size == 10)
+  // STR <Wt>, [<Xn|SP>{, #<pimm>}]
+  // Encoding for the 64-bit variant
+  // Applies when (size == 11)
+  // STR <Xt>, [<Xn|SP>{, #<pimm>}]
+
+  // 1x 11 1001 00 imm12 Rn Rt
+  // F9000000
+  assert(offset <= 0xFFFU && "Immediate out of range");
+  OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000;
   opcode |= static_cast<OPCodeTemplate>(srcReg);
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
-  // imm9 01
-  opcode |= (bit_cast<uint32_t>(offset) & 0x1FFU) << 12U;
+  opcode |= (bit_cast<uint32_t>(offset) & 0xFFFU) << 10U;
   return opcode;
 }
-OPCodeTemplate ldr_simm_ar2r(REG const destReg, REG const addrReg, int32_t const offset, bool const is64bit) {
-  // ldr Wt/Xt, [Xn, #imm]
-  // 1x 111000 01 0 imm9 01 Rn Rt
-  // F8400000 B8400000
-  assert(offset >= -256 && offset <= 255 && "Immediate out of range");
-  OPCodeTemplate opcode = is64bit ? 0xF8400000 : 0xB8400000;
+OPCodeTemplate ldr_base_off(REG const destReg, REG const addrReg, uint32_t const offset, bool const is64bit) {
+  // Applies when (size == 10)
+  // LDR <Wt>, [<Xn|SP>{, #<pimm>}]
+  // Applies when (size == 11)
+  // LDR <Xt>, [<Xn|SP>{, #<pimm>}]
+
+  // 1x 111001 01 imm12 Rn Rt
+  // F9400000 B9400000
+  assert(offset <= 0xFFFU && "Immediate out of range");
+  OPCodeTemplate opcode = is64bit ? 0xF9400000 : 0xB9400000;
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U); // addr 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);         // dest 0-4
-  // imm9 01
-  opcode |= (bit_cast<uint32_t>(offset) & 0x1FFU) << 12U;
+  opcode |= (bit_cast<uint32_t>(offset) & 0xFFFU) << 10U;
   return opcode;
 }
 OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit) {
@@ -90,6 +98,7 @@ OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg) {
   return opcode;
 }
 OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm) {
+  assert(false && "not implemented");
   // MOV (immediate)
   // sf 0 0 100101 hw2 imm16 Rd
   // 0000 0010 100 imm16 00000

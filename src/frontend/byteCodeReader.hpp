@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "../common/util.hpp"
+#include "src/common/util.hpp"
 
 class BytecodeReader {
 public:

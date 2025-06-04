@@ -7,9 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "../common/wasm_type.hpp"
 #include "frontend.hpp"
 #include "operandManager.hpp"
+
+#include "src/common/wasm_type.hpp"
 
 ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
   br_.readWasmBinary(wasmPath);
@@ -209,7 +210,7 @@ void Frontend::parseCodeSection() {
     uint32_t const stackUsage = op.getAlignedSize();
     std::cout << "stackUsage = " << stackUsage << std::endl;
     if (stackUsage != 0U) {
-      backend_.emit.append(dec_sp(stackUsage));
+      backend_.emit.decreaseSPWithClean(stackUsage);
     }
     std::vector<ModuleInfo::WasmInstruction> instructions{};
     while (true) {
@@ -392,7 +393,7 @@ void Frontend::parseCodeSection() {
 
       // prepare return value
       op.subROP(funcTypeInfo.results[0] == WasmType::I64);
-      backend_.emit.append(ldr_simm_ar2r(REG::R0, REG::R28, 0U, false));
+      backend_.emit.append(ldr_base_off(REG::R0, REG::R28, 0U, false));
     }
     assert(validationStack.empty() && "validation stack should be empty after parsing function body");
     OPCodeTemplate const insRET = 0xd65f03c0; // big endian

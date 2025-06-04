@@ -1,7 +1,8 @@
-#include "backend/emit.hpp"
-#include "common/ExecutableMemory.hpp"
 #include "compiler.hpp"
-#include "frontend/frontend.hpp"
+
+#include "src/backend/emit.hpp"
+#include "src/common/ExecutableMemory.hpp"
+#include "src/frontend/frontend.hpp"
 
 ExecutableMemory &Compiler::compile(std::string const &wasmPath) {
   executableMemory_ = frontend_.startCompilation(wasmPath);

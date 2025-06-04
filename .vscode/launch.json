@@ -5,7 +5,7 @@
       "name": "QEMU Remote Debug",
       "type": "cppdbg",
       "request": "launch",
-      "program": "build/demo/Compiler",
+      "program": "build/bin/demo",
       "miDebuggerPath": "/usr/bin/gdb-multiarch",
       "miDebuggerServerAddress": "localhost:123456",
       "stopAtEntry": true,

@@ -3,10 +3,10 @@
 
 #include <string>
 
-#include "common/ExecutableMemory.hpp"
-#include "common/operand_stack.hpp"
-#include "common/stack.hpp"
-#include "frontend/frontend.hpp"
+#include "src/common/ExecutableMemory.hpp"
+#include "src/common/operand_stack.hpp"
+#include "src/common/stack.hpp"
+#include "src/frontend/frontend.hpp"
 
 class Compiler final {
 public:
