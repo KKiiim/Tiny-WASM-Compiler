@@ -1,26 +1,46 @@
-cmake_minimum_required(VERSION 3.14)
 
-set(CMAKE_C_COMPILER "/usr/bin/aarch64-linux-gnu-gcc" CACHE PATH "C compiler")
-set(CMAKE_CXX_COMPILER "/usr/bin/aarch64-linux-gnu-g++" CACHE PATH "C++ compiler")
-set(CMAKE_SYSTEM_NAME Linux)
-set(CMAKE_SYSTEM_PROCESSOR aarch64)
-
+cmake_minimum_required(VERSION 3.15)
 project(tiny-wasm-compiler)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-endif()
-
-message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
-message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
-
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file ${CMAKE_CURRENT_LIST_DIR}/.clang-tidy "--header-filter=${CMAKE_CURRENT_LIST_DIR}/src/**/.*")
+file(GLOB COMPILER_SRC_FILES 
+    ${CMAKE_CURRENT_LIST_DIR}/src/**/*.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.hpp
+)
+
+# include(cmake/AutoSelectBackendTarget.cmake)
+
+set(WASM_COMPILER_INCLUDE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${WASM_COMPILER_INCLUDE_ROOT})
+
+set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file ${CMAKE_CURRENT_LIST_DIR}/.clang-tidy "--header-filter=${CMAKE_CURRENT_LIST_DIR}/(src|tests)/.*")
+
+if(ENABLE_SANITIZE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined,pointer-compare")
+endif()
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+find_package(Threads QUIET) # Needed because of CMake intricacy not finding Threads on some systems when --coverage is enabled otherwise
+
+#
+# subdirectory
+#
+if(ENABLE_DEMO)
+	add_subdirectory(demo)
+endif()
+
+if(ENABLE_TEST)
+	add_subdirectory(tests)
+endif()
 
 set(CAPSTONE_ARM64_SUPPORT ON CACHE BOOL "Enable ARM64 support")
 foreach(option CAPSTONE_ARM_SUPPORT CAPSTONE_M68K_SUPPORT CAPSTONE_MIPS_SUPPORT CAPSTONE_PPC_SUPPORT CAPSTONE_SPARC_SUPPORT CAPSTONE_SYSZ_SUPPORT CAPSTONE_XCORE_SUPPORT CAPSTONE_X86_SUPPORT CAPSTONE_TMS320C64X_SUPPORT CAPSTONE_M680X_SUPPORT CAPSTONE_EVM_SUPPORT CAPSTONE_MOS65XX_SUPPORT CAPSTONE_WASM_SUPPORT CAPSTONE_BPF_SUPPORT CAPSTONE_RISCV_SUPPORT CAPSTONE_SH_SUPPORT CAPSTONE_TRICORE_SUPPORT)
@@ -28,5 +48,3 @@ foreach(option CAPSTONE_ARM_SUPPORT CAPSTONE_M68K_SUPPORT CAPSTONE_MIPS_SUPPORT 
 endforeach()
 
 add_subdirectory(third_party/capstone)
-add_subdirectory(demo)
-add_subdirectory(test)

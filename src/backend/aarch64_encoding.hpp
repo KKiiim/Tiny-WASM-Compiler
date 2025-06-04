@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "../common/util.hpp"
+#include "src/common/util.hpp"
 
 ///
 /// @brief Native registers and their encoding that can be placed into the respective fields in an instruction

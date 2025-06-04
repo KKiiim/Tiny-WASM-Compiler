@@ -90,6 +90,7 @@ OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg) {
   return opcode;
 }
 OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm) {
+  assert(false && "not implemented");
   // MOV (immediate)
   // sf 0 0 100101 hw2 imm16 Rd
   // 0000 0010 100 imm16 00000

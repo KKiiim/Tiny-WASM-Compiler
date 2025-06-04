@@ -5,14 +5,20 @@
 #include <cstdint>
 #include <cstdlib>
 
-#include "../common/ExecutableMemory.hpp"
-#include "../common/wasm_type.hpp"
 #include "aarch64_encoding.hpp"
+
+#include "src/common/ExecutableMemory.hpp"
+#include "src/common/wasm_type.hpp"
 
 class Emit {
 public:
   Emit();
   ~Emit();
+
+  Emit(Emit const &) = delete;
+  Emit &operator=(Emit const &) = delete;
+  Emit(Emit &&) = delete;
+  Emit &operator=(Emit &&) = delete;
 
   void append(OPCodeTemplate const ins);
   ExecutableMemory getExecutableMemory();
@@ -21,6 +27,7 @@ public:
   }
 
   void emit_mov_r_imm64(REG const destReg, uint64_t const imm);
+  void decreaseSPWithClean(uint32_t const size);
 
 private:
   uint8_t *data_;

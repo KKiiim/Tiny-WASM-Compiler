@@ -7,9 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "../common/wasm_type.hpp"
 #include "frontend.hpp"
 #include "operandManager.hpp"
+
+#include "src/common/wasm_type.hpp"
 
 ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
   br_.readWasmBinary(wasmPath);
@@ -209,7 +210,7 @@ void Frontend::parseCodeSection() {
     uint32_t const stackUsage = op.getAlignedSize();
     std::cout << "stackUsage = " << stackUsage << std::endl;
     if (stackUsage != 0U) {
-      backend_.emit.append(dec_sp(stackUsage));
+      backend_.emit.decreaseSPWithClean(stackUsage);
     }
     std::vector<ModuleInfo::WasmInstruction> instructions{};
     while (true) {

@@ -5,12 +5,12 @@
 #include <string>
 #include <vector>
 
-#include "../backend/arm64Backend.hpp"
-#include "../common/ModuleInfo.hpp"
-#include "../common/operand_stack.hpp"
-#include "../common/stack.hpp"
-#include "../common/wasm_type.hpp"
-#include "../frontend/byteCodeReader.hpp"
+#include "src/backend/arm64Backend.hpp"
+#include "src/common/ModuleInfo.hpp"
+#include "src/common/operand_stack.hpp"
+#include "src/common/stack.hpp"
+#include "src/common/wasm_type.hpp"
+#include "src/frontend/byteCodeReader.hpp"
 
 #define LOGGER std::cout
 #define LOGGER_END std::endl

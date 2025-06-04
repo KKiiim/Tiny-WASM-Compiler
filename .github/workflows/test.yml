@@ -24,7 +24,7 @@ jobs:
 
       - name: build arm gtest
         run: |
-          cd third_party/googletest && mkdir build && cd build && cmake .. -DMAKE_INSTALL_PREFIX=./_install -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc && sudo make && sudo make install
+          cd third_party/googletest && mkdir build && cd build && cmake .. -DMAKE_INSTALL_PREFIX=./_install -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc && make -j && sudo make install
 
       - name: setup nodejs
         uses: actions/setup-node@v3
