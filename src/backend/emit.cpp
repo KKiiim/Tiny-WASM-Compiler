@@ -53,8 +53,8 @@ void Emit::decreaseSPWithClean(uint32_t const size) {
   assert((size < static_cast<uint32_t>(INT32_MAX)) && "size must be less than int32_t max value since str_r2ar_simm offset max support 32bit");
   append(dec_sp(size));
   // R9 used as scratch register
-  append(mov_r_imm16(REG::R9, 0U));
-  for (uint32_t i = 0; i < size / 16; ++i) {
+  append(mov_r_imm(REG::R9, 0U));
+  for (uint32_t i = 0; i < size / 4; ++i) {
     // Clear 16 bytes at a time
     int32_t const offset = static_cast<int32_t>(i * 16U);
     append(str_r2ar_simm(REG::SP, REG::R9, offset, false));
