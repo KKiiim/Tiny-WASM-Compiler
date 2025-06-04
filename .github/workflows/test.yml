@@ -34,6 +34,10 @@ jobs:
           npm run build:demo
           npm run test:c2
 
+      - name: build arm gtest
+        run: |
+          cd third_party/googletest && mkdir -p build && cd build && cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc && make -j && sudo make install
+
       - name: gtest spec
         run: |
           npm run build:spectest
