@@ -3,8 +3,8 @@
 
 #include <cstdint>
 
-#include "../backend/arm64Backend.hpp"
-#include "../common/wasm_type.hpp"
+#include "src/backend/arm64Backend.hpp"
+#include "src/common/wasm_type.hpp"
 
 class OP {
   // R28 always point the next free space in the stack

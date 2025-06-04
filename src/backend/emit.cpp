@@ -1,12 +1,14 @@
+#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
 #include <sys/mman.h>
 
-#include "../common/constant.hpp"
 #include "aarch64_encoding.hpp"
 #include "emit.hpp"
+
+#include "src/common/constant.hpp"
 
 Emit::Emit() : data_(nullptr), size_(0U) {
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -43,4 +45,18 @@ void Emit::emit_mov_r_imm64(REG const destReg, uint64_t const imm) {
   append(movk_r_imm16(destReg, (imm >> 16U) & 0xFFFFU, 1, true));
   append(movk_r_imm16(destReg, (imm >> 32U) & 0xFFFFU, 2, true));
   append(movk_r_imm16(destReg, (imm >> 48U) & 0xFFFFU, 3, true));
+}
+
+void Emit::decreaseSPWithClean(uint32_t const bytes) {
+  assert(bytes % 16 == 0 && "[decreaseSPWithClean]size must be aligned to 16 bytes");
+  // TODO(): support larger size
+  assert((bytes < static_cast<uint32_t>(INT32_MAX)) && "size must be less than int32_t max value since str_base_off offset max support 32bit");
+  append(dec_sp(bytes));
+  // R9 used as scratch register
+  append(mov_r_imm(REG::R9, 0U));
+  uint32_t const bytesPerStr = 8U; // 64bits register, 8 bytes per str_base_off
+  for (uint32_t i = 0; i < bytes / 8; ++i) {
+    int32_t const offset = static_cast<int32_t>(i * 8U);
+    append(str_base_off(REG::SP, REG::R9, offset, true));
+  }
 }
