@@ -30,6 +30,9 @@ public:
   inline void subROP(bool const is64bit) {
     backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
   }
+  inline void addROP(bool const is64bit) {
+    backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+  }
   void store_to_op_stack(uint64_t const v, bool const is64bit);
   // void load_from_op_stack(bool const is64bit);
 

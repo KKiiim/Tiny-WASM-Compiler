@@ -209,7 +209,7 @@ void Frontend::parseCodeSection() {
     }
     // TODO(): other stack use excluding local
     uint32_t const stackUsage = op.getAlignedSize();
-    std::cout << "stackUsage = " << stackUsage << std::endl;
+    // std::cout << "stackUsage = " << stackUsage << std::endl;
     if (stackUsage != 0U) {
       backend_.emit.decreaseSPWithClean(stackUsage);
     }
@@ -284,6 +284,37 @@ void Frontend::parseCodeSection() {
         backend_.emit.append(add_r_r_imm(ROP, ROP, 8U, true));
         break;
       }
+      case OPCode::I32_ADD: {
+        assert(validationStack.size() >= 2U && "validation stack should have at least two elements for I32_ADD");
+        assert(validationStack.top() == OperandStack::OperandType::I32 && "validation stack top should be I32 for I32_ADD");
+        validationStack.pop();
+        assert(validationStack.top() == OperandStack::OperandType::I32 && "validation stack second top should be I32 for I32_ADD");
+        // don't pop again since result will be pushed
+
+        // Use W9 as right value scratch register
+        op.subROP(false);
+        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, false));
+        op.subROP(false);
+        // Use W10 as left value scratch register
+        backend_.emit.append(ldr_base_off(REG::R10, ROP, 0U, false));
+        backend_.emit.append(add_r_r_r(REG::R9, REG::R9, REG::R10, false));
+
+        // Store result to ROP
+        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, false));
+        op.addROP(false);
+        break;
+      }
+      case OPCode::I32_SUB: {
+        validationStack.pop();
+        break;
+      }
+      case OPCode::I32_MUL: {
+        validationStack.pop();
+        break;
+      }
+      case OPCode::I64_ADD:
+      case OPCode::I64_SUB:
+      case OPCode::I64_MUL:
       case OPCode::UNREACHABLE:
       case OPCode::NOP:
       case OPCode::BLOCK:
@@ -358,9 +389,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_CLZ:
       case OPCode::I32_CTZ:
       case OPCode::I32_POPCNT:
-      case OPCode::I32_ADD:
-      case OPCode::I32_SUB:
-      case OPCode::I32_MUL:
       case OPCode::I32_DIV_S:
       case OPCode::I32_DIV_U:
       case OPCode::I32_REM_S:
@@ -376,9 +404,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_CLZ:
       case OPCode::I64_CTZ:
       case OPCode::I64_POPCNT:
-      case OPCode::I64_ADD:
-      case OPCode::I64_SUB:
-      case OPCode::I64_MUL:
       case OPCode::I64_DIV_S:
       case OPCode::I64_DIV_U:
       case OPCode::I64_REM_S:

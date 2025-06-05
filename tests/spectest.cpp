@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <string>
 
+#include "src/common/util.hpp"
 #include "src/compiler.hpp"
 
 TEST(Chapter02, Local0wasm) {
@@ -44,6 +45,20 @@ TEST(Chapter02, Local2wasm) {
 
   ret32 = compiler.singleCallByName<uint32_t>("as-local.tee-value", "i(i)", 0U);
   EXPECT_EQ(ret32, 1U);
+}
+
+TEST(Chapter03, arithmetic0) {
+  Compiler compiler;
+  ExecutableMemory const &execMemory = compiler.compile("chapters/Chapter03/arithmetic.0.wasm");
+  execMemory.disassemble();
+
+  uint32_t ret32 = compiler.singleCallByName<uint32_t>("add", "i(ii)", 1U, 1U);
+  EXPECT_EQ(ret32, 2U);
+  ret32 = compiler.singleCallByName<uint32_t>("add", "i(ii)", 1U, 0U);
+  EXPECT_EQ(ret32, 1U);
+  ret32 = compiler.singleCallByName<uint32_t>("add", "i(ii)", -1, -1);
+  EXPECT_EQ(bit_cast<int32_t>(ret32), -2);
+  // bug: get 0xfe which is interpreted as 254
 }
 
 int main(int argc, char **argv) {
