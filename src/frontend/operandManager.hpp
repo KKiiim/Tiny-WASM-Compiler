@@ -7,9 +7,6 @@
 #include "src/common/wasm_type.hpp"
 
 class OP {
-  // R28 always point the next free space in the stack
-  static constexpr const REG ROP = REG::R28;
-
 public:
   explicit OP(Arm64Backend &backend) : size_(0U), backend_(backend) {
   }
@@ -30,7 +27,11 @@ public:
   /// @brief Pop local variable from the operand stack
   void set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const isTee);
   /// @brief drop a value from the operand stack
-  void subROP(bool const is64bit);
+  inline void subROP(bool const is64bit) {
+    backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+  }
+  void store_to_op_stack(uint64_t const v, bool const is64bit);
+  // void load_from_op_stack(bool const is64bit);
 
 private:
   uint32_t size_;

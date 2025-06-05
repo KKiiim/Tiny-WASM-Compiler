@@ -97,18 +97,6 @@ OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg) {
   opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
   return opcode;
 }
-OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm) {
-  assert(false && "not implemented");
-  // MOV (immediate)
-  // sf 0 0 100101 hw2 imm16 Rd
-  // 0000 0010 100 imm16 00000
-  // 0x2a000000
-  assert(imm <= 0xFFFFU && "Immediate out of range");
-  OPCodeTemplate opcode = 0x2a000000;               // MOV Xd, #imm
-  opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
-  opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
-  return opcode;
-}
 OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const shift, bool const is64bit) {
   /*
     MOVK (keep)
@@ -125,16 +113,15 @@ OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const
   "32-bit": 0 (the default) or 16, encoded in the "hw" field as <shift>/16.
   "64-bit": 0 (the default), 16, 32 or 48, encoded in the "hw" field as <shift>/16.
   */
-  assert(is64bit && "currently always use full register 64bits");
   assert(imm <= 0xFFFFU && "Immediate out of range");
-  assert(shift <= 3U && "Shift out of range");
-  OPCodeTemplate opcode = 0xf2800000;               // MOV Xd, #imm
+  OPCodeTemplate opcode = is64bit ? 0xf2800000 : 0x72800000;
+  assert(shift <= (is64bit ? 3U : 1U) && "Shift out of range");
   opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
   opcode |= (shift & 0x3U) << 21U;                  // shift value 21-22
   return opcode;
 }
-OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm) {
+OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm, bool const is64bit) {
   // MOV (wide immediate)
   // sf 10(opc) 100101 hw2 imm16 Rd
   // 1101 0010 100 imm16 00000
@@ -142,7 +129,7 @@ OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm) {
   // 1011 0010 0000
   // 1 01 100100
   assert(imm <= 0xFFFFU && "Immediate out of range");
-  OPCodeTemplate opcode = 0xd2800000;               // MOV Xd, #imm
+  OPCodeTemplate opcode = is64bit ? 0xd2800000 : 0x52800000;
   opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
   return opcode;
