@@ -1,6 +1,9 @@
 {
   "name": "tiny-wasm-compiler",
   "version": "0.0.0",
+  "engines": {
+    "node": ">=22.16.0"
+  },
   "description": "JIT compiler for WASM",
   "type": "module",
   "scripts": {
@@ -16,7 +19,7 @@
     "preCommit": "npm run check:all && npm run build:demo"
   },
   "devDependencies": {
-    "@types/node": "^20.12.13",
+    "@types/node": "^22.15.29",
     "prettier": "^3.0.2"
   }
 }

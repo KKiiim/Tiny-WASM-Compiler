@@ -11,7 +11,7 @@ ExecutableMemory &Compiler::compile(std::string const &wasmPath) {
 
 void Compiler::initRuntime() {
   Emit emit{}; // temporary emitter
-  emit.emit_mov_r_imm64(REG::R28, operandStack_.getStartAddr());
+  emit.emit_mov_x_imm64(REG::R28, operandStack_.getStartAddr());
   OPCodeTemplate const insRET = 0xd65f03c0; // big endian
   emit.append(insRET);
   ExecutableMemory const exec = emit.getExecutableMemory();

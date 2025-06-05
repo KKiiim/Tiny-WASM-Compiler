@@ -26,7 +26,8 @@ public:
     return size_;
   }
 
-  void emit_mov_r_imm64(REG const destReg, uint64_t const imm);
+  void emit_mov_x_imm64(REG const destReg, uint64_t const imm);
+  void emit_mov_w_imm32(REG const destReg, uint32_t const imm);
   void decreaseSPWithClean(uint32_t const bytes);
 
 private:

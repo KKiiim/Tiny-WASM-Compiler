@@ -21,6 +21,11 @@ enum class REG : uint32_t { // clang-format off
 
 constexpr uint32_t totalNumRegs{static_cast<uint32_t>(REG::NUMREGS)}; ///< Total number of registers in the enum
 
+///////////////////////////////////////////////////////////////////
+// R28 always point the next free space in the stack
+static constexpr const REG ROP = REG::R28;
+///////////////////////////////////////////////////////////////////
+
 namespace RegUtil {
 ///
 /// @brief Checks whether a register is a general purpose register (as opposed to a floating point register)
@@ -83,10 +88,9 @@ OPCodeTemplate inc_sp(uint32_t const imm);
 OPCodeTemplate dec_sp(uint32_t const imm);
 /// @brief MOV R[d], R[s]
 OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg);
-/// @brief MOV R[d], imm
-/// @note support 64bits imm
-OPCodeTemplate mov_r_imm(REG const destReg, uint64_t const imm);
-OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm);
+/// @brief MOV R[d], imm. Can shift and not keep, but not supported yet
+OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm, bool const is64bit);
+///@brief MOVK R[d], imm, shift. K means keeping other bits unchanged
 OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const shift, bool const is64bit);
 
 #endif // AARCH64_ENCODING_HPP

@@ -35,10 +35,13 @@ void OP::get_r_param(uint32_t const paramIndex, bool const is64bit) {
   backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
 }
 void OP::set_r_param(uint32_t const paramIndex, bool const is64bit, bool const isTee = false) {
-  if (!isTee) {
-    backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+  subROP(is64bit);
+  backend_.emit.append(ldr_base_off(static_cast<REG>(paramIndex), ROP, 0U, is64bit));
+  // TODO(): reduce ins, if tee don't sub sp, can use signed offset load(not support yet)
+  if (isTee) {
+    // restore the ROP
+    backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
   }
-  backend_.emit.append(str_base_off(static_cast<REG>(paramIndex), ROP, 0U, is64bit));
 }
 void OP::get_ofsp_local(uint32_t const offset2SP, bool const is64bit) {
   // Use R9 as scratch register
@@ -49,13 +52,13 @@ void OP::get_ofsp_local(uint32_t const offset2SP, bool const is64bit) {
 }
 void OP::set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const isTee = false) {
   // Use R9 as scratch register
-  if (!isTee) {
-    backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
-  }
+  subROP(is64bit);
   assert(offset2SP <= MaxPositiveImmForLdrStr && "offset2SP too large");
   backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
   backend_.emit.append(str_base_off(REG::SP, REG::R9, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit));
-}
-void OP::subROP(bool const is64bit) {
-  backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+  // TODO(): reduce ins, if tee don't sub sp, can use signed offset load(not support yet)
+  if (isTee) {
+    // restore the ROP
+    backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+  }
 }

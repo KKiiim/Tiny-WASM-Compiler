@@ -10,6 +10,7 @@
 #include "frontend.hpp"
 #include "operandManager.hpp"
 
+#include "src/backend/aarch64_encoding.hpp"
 #include "src/common/wasm_type.hpp"
 
 ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
@@ -250,7 +251,10 @@ void Frontend::parseCodeSection() {
         auto const &l = funcBody.locals[localIdx];
         auto const topType = validationStack.top();
         assert(operandStack_.toWasmType(topType) == l.type && "must");
-        validationStack.pop();
+        // local.tee don't pop operand stack element
+        if (opcode == OPCode::LOCAL_SET) {
+          validationStack.pop();
+        }
 
         if (l.isParam) {
           assert(localIdx < funcTypeInfo.params.size());
@@ -260,6 +264,24 @@ void Frontend::parseCodeSection() {
           uint32_t const offset2SP = l.offset;
           op.set_ofsp_local(offset2SP, topType == OperandStack::OperandType::I64, opcode == OPCode::LOCAL_TEE);
         }
+        break;
+      }
+      case OPCode::I32_CONST: {
+        uint32_t const v = bit_cast<uint32_t>(br_.readLEB128<int32_t>());
+        validationStack.push(OperandStack::OperandType::I32);
+        // Use W9 as scratch register
+        backend_.emit.emit_mov_w_imm32(REG::R9, v);
+        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, false));
+        backend_.emit.append(add_r_r_imm(ROP, ROP, 4U, true));
+        break;
+      }
+      case OPCode::I64_CONST: {
+        uint64_t const v = bit_cast<uint64_t>(br_.readLEB128<int64_t>());
+        validationStack.push(OperandStack::OperandType::I64);
+        // Use W9 as scratch register
+        backend_.emit.emit_mov_x_imm64(REG::R9, v);
+        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, true));
+        backend_.emit.append(add_r_r_imm(ROP, ROP, 8U, true));
         break;
       }
       case OPCode::UNREACHABLE:
@@ -309,8 +331,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_STORE32:
       case OPCode::MEMORY_SIZE:
       case OPCode::MEMORY_GROW:
-      case OPCode::I32_CONST:
-      case OPCode::I64_CONST:
       case OPCode::F32_CONST:
       case OPCode::F64_CONST:
       case OPCode::I32_EQZ:
@@ -380,7 +400,6 @@ void Frontend::parseCodeSection() {
 
     funcBody.ins = std::move(instructions);
     module_.functionInfos_.push_back(std::move(funcBody));
-    assert(module_.functionInfos_.size() == funcSignatureIndex + 1U);
 
     if (stackUsage != 0U) {
       backend_.emit.append(inc_sp(stackUsage));
