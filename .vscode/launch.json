@@ -2,7 +2,25 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "QEMU Remote Debug",
+      "name": "spectest",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "build/bin/Spectest",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "localhost:123456",
+      "stopAtEntry": true,
+      "setupCommands": [
+        {
+          "text": "-enable-pretty-printing"
+        }
+      ],
+      "externalConsole": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "targetArchitecture": "arm"
+    },
+    {
+      "name": "demo",
       "type": "cppdbg",
       "request": "launch",
       "program": "build/bin/demo",

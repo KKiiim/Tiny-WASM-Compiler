@@ -76,8 +76,12 @@ OPCodeTemplate ldr_base_off(REG const destReg, REG const addrReg, uint32_t const
 OPCodeTemplate str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit);
 /// @brief ADD R[d], R[s], imm
 OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit);
-/// @brief ADD R[d], R[s], R[imm]
-OPCodeTemplate add_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg);
+/// @brief ADD R[d], R[n], R[m]
+OPCodeTemplate add_r_r_extendedR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
+/// @brief ADD R[d], R[n], R[m]
+OPCodeTemplate add_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
+/// @brief ADD R[d], R[n], R[m]. adds two register values and the Carry flag value, and writes the result to the destination register.
+OPCodeTemplate adc_r_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
 /// @brief SUB R[d], R[s], imm
 OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm, bool const is64bit);
 /// @brief SUB R[d], R[s], R[imm]

@@ -15,7 +15,7 @@ class OperandStack {
 
 public:
   OperandStack() : m_(bit_cast<void *>(malloc(DefaultPageSize))), mem_(static_cast<uint8_t *>(m_), DefaultPageSize) {
-    std::cout << "mmap for operand stack" << std::endl;
+    // std::cout << "mmap for operand stack" << std::endl;
   }
   inline uint64_t getStartAddr() {
     return mem_.data<uint64_t>();

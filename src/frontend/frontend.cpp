@@ -11,6 +11,7 @@
 #include "operandManager.hpp"
 
 #include "src/backend/aarch64_encoding.hpp"
+#include "src/common/operand_stack.hpp"
 #include "src/common/wasm_type.hpp"
 
 ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
@@ -209,7 +210,7 @@ void Frontend::parseCodeSection() {
     }
     // TODO(): other stack use excluding local
     uint32_t const stackUsage = op.getAlignedSize();
-    std::cout << "stackUsage = " << stackUsage << std::endl;
+    // std::cout << "stackUsage = " << stackUsage << std::endl;
     if (stackUsage != 0U) {
       backend_.emit.decreaseSPWithClean(stackUsage);
     }
@@ -282,6 +283,47 @@ void Frontend::parseCodeSection() {
         backend_.emit.emit_mov_x_imm64(REG::R9, v);
         backend_.emit.append(str_base_off(ROP, REG::R9, 0U, true));
         backend_.emit.append(add_r_r_imm(ROP, ROP, 8U, true));
+        break;
+      }
+      case OPCode::I32_ADD:
+      case OPCode::I64_ADD: {
+        bool const is64bit = (opcode == OPCode::I64_ADD);
+
+        assert(validationStack.size() >= 2U && "validation stack should have at least two elements for I32_ADD");
+        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
+               "validation stack top mismatch");
+        validationStack.pop();
+        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
+               "validation stack second top mismatch");
+        // don't pop again since result will be pushed
+
+        // Use R9 as right value scratch register
+        op.subROP(is64bit);
+        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
+        op.subROP(is64bit);
+        // Use R10 as left value scratch register
+        backend_.emit.append(ldr_base_off(REG::R10, ROP, 0U, is64bit));
+        backend_.emit.append(add_r_r_shiftR(REG::R9, REG::R9, REG::R10, is64bit));
+
+        // Store result to ROP
+        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, is64bit));
+        op.addROP(is64bit);
+        break;
+      }
+      case OPCode::I32_SUB: {
+        validationStack.pop();
+        break;
+      }
+      case OPCode::I32_MUL: {
+        validationStack.pop();
+        break;
+      }
+      case OPCode::I64_SUB: {
+        validationStack.pop();
+        break;
+      }
+      case OPCode::I64_MUL: {
+        validationStack.pop();
         break;
       }
       case OPCode::UNREACHABLE:
@@ -358,9 +400,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_CLZ:
       case OPCode::I32_CTZ:
       case OPCode::I32_POPCNT:
-      case OPCode::I32_ADD:
-      case OPCode::I32_SUB:
-      case OPCode::I32_MUL:
       case OPCode::I32_DIV_S:
       case OPCode::I32_DIV_U:
       case OPCode::I32_REM_S:
@@ -376,9 +415,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_CLZ:
       case OPCode::I64_CTZ:
       case OPCode::I64_POPCNT:
-      case OPCode::I64_ADD:
-      case OPCode::I64_SUB:
-      case OPCode::I64_MUL:
       case OPCode::I64_DIV_S:
       case OPCode::I64_DIV_U:
       case OPCode::I64_REM_S:
@@ -410,9 +446,10 @@ void Frontend::parseCodeSection() {
       assert(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0] && "validation stack top should be the return value type");
       validationStack.pop();
 
+      bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
       // prepare return value
-      op.subROP(funcTypeInfo.results[0] == WasmType::I64);
-      backend_.emit.append(ldr_base_off(REG::R0, REG::R28, 0U, false));
+      op.subROP(is64bit);
+      backend_.emit.append(ldr_base_off(REG::R0, REG::R28, 0U, is64bit));
     }
     assert(validationStack.empty() && "validation stack should be empty after parsing function body");
     OPCodeTemplate const insRET = 0xd65f03c0; // big endian
