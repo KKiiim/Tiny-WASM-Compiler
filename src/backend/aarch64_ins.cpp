@@ -47,11 +47,37 @@ OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const u
   opcode |= (uimm & 0xFFFU) << 10U;                          // imm12
   return opcode;
 }
-OPCodeTemplate add_r_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+OPCodeTemplate add_r_r_extendedR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  assert(false && "don't know how to use yet");
   // TODO(): can support shift and other extend features
   // sf 000 1011 001 Rm option(3) immShift(3) Rn Rd
   // 0b200000
   OPCodeTemplate opcode = is64bit ? 0x8b200000 : 0x0b200000;
+  opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
+  return opcode;
+}
+OPCodeTemplate add_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  // sf 000 1011 shift(2) 0 Rm imm(6) Rn Rd
+  // 0b000000
+  // ADD (shifted register)
+  // Add optionally-shifted register
+  // adds a register value and an optionally-shifted register value, and writes the result to the destination register.
+
+  // not support shift yet
+  OPCodeTemplate opcode = is64bit ? 0x8b000000 : 0x0b000000;
+  opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
+  return opcode;
+}
+OPCodeTemplate adc_r_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  assert(false && "don't know how to use yet");
+  // sf 001101 0000 Rm 000000 Rn Rd
+  // 0001 1010 000 Rm 000000 Rn Rd
+  // 1a000000
+  OPCodeTemplate opcode = is64bit ? 0x9a000000 : 0x1a000000;    // ADC Xd, Xn, Xm
   opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
   opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
