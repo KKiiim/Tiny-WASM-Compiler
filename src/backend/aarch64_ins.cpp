@@ -105,6 +105,19 @@ OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const imm
   opcode |= (static_cast<OPCodeTemplate>(immReg) << 16U);
   return opcode;
 }
+OPCodeTemplate sub_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  // Subtract optionally-shifted register
+  // subtracts an optionally-shifted register value from a register value, and writes the result to the destination register.
+
+  // sf 100 1011 shift(2) 0 Rm imm(6) Rn Rd
+  // cb000000
+  // shift is not supported yet
+  OPCodeTemplate opcode = is64bit ? 0xcb000000 : 0x4b000000;
+  opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
+  return opcode;
+}
 OPCodeTemplate inc_sp(uint32_t const imm) {
   return add_r_r_imm(REG::SP, REG::SP, imm, true);
 }
