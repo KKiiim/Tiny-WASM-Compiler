@@ -50,7 +50,6 @@ TEST(Chapter02, Local2wasm) {
 TEST(Chapter03, arithmetic0) {
   Compiler compiler;
   ExecutableMemory const &execMemory = compiler.compile("chapters/Chapter03/arithmetic.0.wasm");
-  execMemory.disassemble();
 
   // i32.add
   EXPECT_EQ(2U, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("add", "i(ii)", 1U, 1U)));
