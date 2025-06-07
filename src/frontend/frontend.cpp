@@ -303,22 +303,39 @@ void Frontend::parseCodeSection() {
         op.subROP(is64bit);
         // Use R10 as left value scratch register
         backend_.emit.append(ldr_base_off(REG::R10, ROP, 0U, is64bit));
-        backend_.emit.append(add_r_r_shiftR(REG::R9, REG::R9, REG::R10, is64bit));
+        backend_.emit.append(add_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit));
 
         // Store result to ROP
         backend_.emit.append(str_base_off(ROP, REG::R9, 0U, is64bit));
         op.addROP(is64bit);
         break;
       }
+      case OPCode::I64_SUB:
       case OPCode::I32_SUB: {
+        bool const is64bit = (opcode == OPCode::I64_SUB);
+
+        assert(validationStack.size() >= 2U && "validation stack should have at least two elements for Ixx_SUB");
+        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
+               "validation stack top mismatch");
         validationStack.pop();
+        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
+               "validation stack second top mismatch");
+        // don't pop again since result will be pushed
+
+        // Use R9 as right value scratch register
+        op.subROP(is64bit);
+        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
+        op.subROP(is64bit);
+        // Use R10 as left value scratch register
+        backend_.emit.append(ldr_base_off(REG::R10, ROP, 0U, is64bit));
+        backend_.emit.append(sub_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit));
+
+        // Store result to ROP
+        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, is64bit));
+        op.addROP(is64bit);
         break;
       }
       case OPCode::I32_MUL: {
-        validationStack.pop();
-        break;
-      }
-      case OPCode::I64_SUB: {
         validationStack.pop();
         break;
       }

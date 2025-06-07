@@ -2,3 +2,4 @@ node_modules
 a.out
 build*
 .cache
+tests/testcases/tmp

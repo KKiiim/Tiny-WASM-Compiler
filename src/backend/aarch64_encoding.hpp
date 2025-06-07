@@ -86,6 +86,7 @@ OPCodeTemplate adc_r_r_r(REG const destReg, REG const firstSrcReg, REG const sec
 OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm, bool const is64bit);
 /// @brief SUB R[d], R[s], R[imm]
 OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg);
+OPCodeTemplate sub_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
 /// @brief Increment SP by imm
 OPCodeTemplate inc_sp(uint32_t const imm);
 /// @brief Decrement SP by imm

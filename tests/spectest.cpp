@@ -50,6 +50,7 @@ TEST(Chapter02, Local2wasm) {
 TEST(Chapter03, arithmetic0) {
   Compiler compiler;
   ExecutableMemory const &execMemory = compiler.compile("chapters/Chapter03/arithmetic.0.wasm");
+  execMemory.disassemble();
 
   // i32.add
   EXPECT_EQ(2U, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("add", "i(ii)", 1U, 1U)));
@@ -60,6 +61,16 @@ TEST(Chapter03, arithmetic0) {
   EXPECT_EQ(0x7fffffff, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("add", "i(ii)", 0x80000000, -1)));
   EXPECT_EQ(0, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("add", "i(ii)", 0x80000000, 0x80000000)));
   EXPECT_EQ(0x40000000, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("add", "i(ii)", 0x3fffffff, 1U)));
+
+  // i32.sub
+  EXPECT_EQ(0, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 1U, 1U)));
+  EXPECT_EQ(1U, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 1U, 0U)));
+  EXPECT_EQ(0, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", -1, -1)));
+  EXPECT_EQ(-2, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", -1, 1U)));
+  EXPECT_EQ(0x80000000, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 0x7fffffff, -1)));
+  EXPECT_EQ(0x7fffffff, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 0x80000000, 1U)));
+  EXPECT_EQ(0, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 0x80000000, 0x80000000)));
+  EXPECT_EQ(0x40000000, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 0x3fffffff, -1)));
 }
 
 TEST(Chapter03, arithmetic1) {
@@ -77,6 +88,17 @@ TEST(Chapter03, arithmetic1) {
             static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("add", "I(II)", 0x8000000000000000, static_cast<uint64_t>(-1))));
   EXPECT_EQ(0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("add", "I(II)", 0x8000000000000000, 0x8000000000000000)));
   EXPECT_EQ(0x4000000000000000, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("add", "I(II)", 0x3fffffffffffffff, 1U)));
+
+  // i64.sub
+  EXPECT_EQ(0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", 1U, 1U)));
+  EXPECT_EQ(1U, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", 1U, 0U)));
+  EXPECT_EQ(0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", static_cast<uint64_t>(-1), static_cast<uint64_t>(-1))));
+  EXPECT_EQ(0x8000000000000000, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", static_cast<uint64_t>(0x7fffffffffffffff),
+                                                                                          static_cast<uint64_t>(-1))));
+  EXPECT_EQ(0x7fffffffffffffff, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", 0x8000000000000000, 1U)));
+  EXPECT_EQ(0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", 0x8000000000000000, 0x8000000000000000)));
+  EXPECT_EQ(0x4000000000000000,
+            static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", 0x3fffffffffffffff, static_cast<uint64_t>(-1))));
 }
 
 int main(int argc, char **argv) {
