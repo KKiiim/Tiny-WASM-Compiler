@@ -177,3 +177,12 @@ OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm, bool const is6
 //   opcode |= (static_cast<OPCodeTemplate>(REG::SP) << 5U);    // SP register as base, 5-9
 //   return opcode;
 // }
+OPCodeTemplate mul_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  // sf 001 1011 000 Rm 0111 11 Rn Rd
+  // 1b007c00
+  OPCodeTemplate opcode = is64bit ? 0x9b007c00 : 0x1b007c00;
+  opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
+  return opcode;
+}
