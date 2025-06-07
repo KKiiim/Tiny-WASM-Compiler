@@ -70,6 +70,18 @@ TEST(Chapter03, arithmetic0) {
   EXPECT_EQ(0x7fffffff, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 0x80000000, 1U)));
   EXPECT_EQ(0, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 0x80000000, 0x80000000)));
   EXPECT_EQ(0x40000000, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("sub", "i(ii)", 0x3fffffff, -1)));
+  execMemory.disassemble();
+
+  // i32.mul
+  EXPECT_EQ(1U, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 1U, 1U)));
+  EXPECT_EQ(0U, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 1U, 0U)));
+  EXPECT_EQ(1, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", -1, -1)));
+  EXPECT_EQ(0, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 0x10000000, 4096U)));
+  EXPECT_EQ(0, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 0x80000000, 0)));
+  EXPECT_EQ(0x80000000, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 0x80000000, -1)));
+  EXPECT_EQ(0x80000001, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 0x7fffffff, -1)));
+  EXPECT_EQ(0x358e7470, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 0x01234567, 0x76543210)));
+  EXPECT_EQ(1, static_cast<uint32_t>(compiler.singleCallByName<uint32_t>("mul", "i(ii)", 0x7fffffff, 0x7fffffff)));
 }
 
 TEST(Chapter03, arithmetic1) {
@@ -98,6 +110,19 @@ TEST(Chapter03, arithmetic1) {
   EXPECT_EQ(0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", 0x8000000000000000, 0x8000000000000000)));
   EXPECT_EQ(0x4000000000000000,
             static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("sub", "I(II)", 0x3fffffffffffffff, static_cast<uint64_t>(-1))));
+
+  // i64.mul
+  EXPECT_EQ(1U, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 1U, 1U)));
+  EXPECT_EQ(0U, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 1U, 0U)));
+  EXPECT_EQ(1, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", static_cast<uint64_t>(-1), static_cast<uint64_t>(-1))));
+  EXPECT_EQ(0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 0x1000000000000000, 4096U)));
+  EXPECT_EQ(0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 0x8000000000000000, 0)));
+  EXPECT_EQ(0x8000000000000000,
+            static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 0x8000000000000000, static_cast<uint64_t>(-1))));
+  EXPECT_EQ(0x8000000000000001,
+            static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 0x7fffffffffffffff, static_cast<uint64_t>(-1))));
+  EXPECT_EQ(0x2236d88fe5618cf0, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 0x0123456789abcdef, 0xfedcba9876543210)));
+  EXPECT_EQ(1, static_cast<uint64_t>(compiler.singleCallByName<uint64_t>("mul", "I(II)", 0x7fffffffffffffff, 0x7fffffffffffffff)));
 }
 
 int main(int argc, char **argv) {

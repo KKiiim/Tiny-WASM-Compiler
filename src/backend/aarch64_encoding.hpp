@@ -98,4 +98,6 @@ OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm, bool const is6
 ///@brief MOVK R[d], imm, shift. K means keeping other bits unchanged
 OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const shift, bool const is64bit);
 
+OPCodeTemplate mul_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
+
 #endif // AARCH64_ENCODING_HPP
