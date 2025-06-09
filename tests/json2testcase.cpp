@@ -3,9 +3,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
-#include <iostream>
 
 #include "json2testcase.hpp"
+
+#include "src/common/logger.hpp"
 
 namespace spec {
 
@@ -29,7 +30,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
   }
   auto jsonData_ = nlohmann::json::parse(jsonFile);
   std::string const sourceFilename = jsonData_["source_filename"].get<std::string>();
-  std::cout << "Parse: " << sourceFilename << std::endl;
+  LOG_INFO << "Parse: " << sourceFilename << std::endl;
 
   for (const auto &command : jsonData_["commands"]) {
     std::string const commandType = command["type"].get<std::string>();
@@ -67,7 +68,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
       testcase.expected = std::move(expectedParam);
       modules_[modules_.size() - 1].testCases.push_back(std::move(testcase));
     } else {
-      std::cerr << "Unknown command type: " << commandType << std::endl;
+      LOG_ERROR << "Unknown command type: " << commandType << std::endl;
       continue; // Skip unknown command types
     }
   }
@@ -78,30 +79,30 @@ void JsonReader::dump() const {
       "module", "assert_return", "invoke", "i32", "i64", "NONE",
   };
   for (const auto &module : modules_) {
-    std::cout << "Module: " << module.moduleFileName << std::endl;
+    LOG_INFO << "Module: " << module.moduleFileName << std::endl;
     for (const auto &testCase : module.testCases) {
-      std::cout << "  Test Case Type: " << typeNames[static_cast<size_t>(testCase.commandType)] << std::endl;
-      std::cout << "  Test Case Line: " << testCase.line << std::endl;
-      std::cout << "  Action Type: " << typeNames[static_cast<size_t>(testCase.action.actionType)] << ", Function: " << testCase.action.functionName
-                << std::endl;
+      LOG_INFO << "  Test Case Type: " << typeNames[static_cast<size_t>(testCase.commandType)] << std::endl;
+      LOG_INFO << "  Test Case Line: " << testCase.line << std::endl;
+      LOG_INFO << "  Action Type: " << typeNames[static_cast<size_t>(testCase.action.actionType)] << ", Function: " << testCase.action.functionName
+               << std::endl;
 
       if (testCase.action.args.size() == 0) {
-        std::cout << "    No Args" << std::endl;
+        LOG_INFO << "    No Args" << std::endl;
       }
       for (const auto &arg : testCase.action.args) {
-        std::cout << "    Arg Type: " << typeNames[static_cast<size_t>(arg.type)]
-                  << ", Value: " << (arg.type == Type::i32 ? arg.value32 : arg.value64) << std::endl;
+        LOG_INFO << "    Arg Type: " << typeNames[static_cast<size_t>(arg.type)] << ", Value: " << (arg.type == Type::i32 ? arg.value32 : arg.value64)
+                 << std::endl;
       }
 
       if (testCase.expected.ret.size() == 0) {
-        std::cout << "    No Expected Params" << std::endl;
+        LOG_INFO << "    No Expected Params" << std::endl;
       }
       for (const auto &expected : testCase.expected.ret) {
-        std::cout << "  Expected Type: " << typeNames[static_cast<size_t>(expected.type)]
-                  << ", Value: " << (expected.type == Type::i32 ? expected.value32 : expected.value64) << std::endl;
+        LOG_INFO << "  Expected Type: " << typeNames[static_cast<size_t>(expected.type)]
+                 << ", Value: " << (expected.type == Type::i32 ? expected.value32 : expected.value64) << std::endl;
       }
 
-      std::cout << std::endl;
+      LOG_INFO << std::endl;
     }
   }
 }
