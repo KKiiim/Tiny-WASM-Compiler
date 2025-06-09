@@ -7,13 +7,12 @@
 
 #include "src/backend/arm64Backend.hpp"
 #include "src/common/ModuleInfo.hpp"
+#include "src/common/logger.hpp"
 #include "src/common/operand_stack.hpp"
 #include "src/common/stack.hpp"
 #include "src/common/wasm_type.hpp"
 #include "src/frontend/byteCodeReader.hpp"
 
-#define LOGGER std::cout
-#define LOGGER_END std::endl
 class Frontend {
 public:
   explicit Frontend(ModuleInfo &module, Stack &stack, OperandStack &operandStack) : module_(module), stack_(stack), operandStack_(operandStack) {

@@ -1,8 +1,9 @@
 #include <cassert>
-#include <iostream>
 #include <stdexcept>
 
 #include "ModuleInfo.hpp"
+
+#include "src/common/logger.hpp"
 
 SignatureType ModuleInfo::wasmType2SignatureType(WasmType const type) const {
   switch (type) {
@@ -42,7 +43,7 @@ bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string con
     if (wasmType2SignatureType(funcTypeInfo.params[i]) == static_cast<SignatureType>(signature[sigIndex])) {
       sigIndex++;
     } else {
-      std::cout << "Signature parameter type does not match function parameter type at index " << std::to_string(i) << std::endl;
+      LOG_ERROR << "Signature parameter type does not match function parameter type at index " << std::to_string(i) << std::endl;
       return false;
     }
   }

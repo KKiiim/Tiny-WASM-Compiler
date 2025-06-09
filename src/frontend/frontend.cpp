@@ -1,7 +1,6 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <iostream>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -11,6 +10,7 @@
 #include "operandManager.hpp"
 
 #include "src/backend/aarch64_encoding.hpp"
+#include "src/common/logger.hpp"
 #include "src/common/operand_stack.hpp"
 #include "src/common/wasm_type.hpp"
 
@@ -19,7 +19,7 @@ ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
 
   validateMagicNumber();
   validateVersion();
-  std::cout << "validate success" << std::endl;
+  LOG_DEBUG << "validate success" << std::endl;
 
   while (br_.hasNextByte()) {
     SectionType const sectionType{br_.readByte<SectionType>()};
@@ -75,7 +75,7 @@ ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
   if (br_.getBytesLeft() != 0U) {
     throw std::runtime_error("bytecode left length should be zero after parsing");
   }
-  std::cout << "parse wasm success" << std::endl;
+  LOG_DEBUG << "parse wasm success" << std::endl;
 
   // logParsedInfo();
 
@@ -210,7 +210,7 @@ void Frontend::parseCodeSection() {
     }
     // TODO(): other stack use excluding local
     uint32_t const stackUsage = op.getAlignedSize();
-    // std::cout << "stackUsage = " << stackUsage << std::endl;
+    LOG_DEBUG << "stackUsage = " << stackUsage << std::endl;
     if (stackUsage != 0U) {
       backend_.emit.decreaseSPWithClean(stackUsage);
     }
@@ -501,32 +501,32 @@ void Frontend::parseNameSection() {
 }
 
 void Frontend::logParsedInfo() {
-  LOGGER << "========================= type section =========================" << LOGGER_END;
+  LOG_DEBUG << "========================= type section =========================" << std::endl;
   for (uint32_t i = 0; i < module_.type_.size(); i++) {
-    LOGGER << "type[" << i << "] params num = " << module_.type_[i].params.size() << " result num = " << module_.type_[i].results.size()
-           << LOGGER_END;
+    LOG_DEBUG << "type[" << i << "] params num = " << module_.type_[i].params.size() << " result num = " << module_.type_[i].results.size()
+              << std::endl;
   }
-  LOGGER << "========================= func section =========================" << LOGGER_END;
+  LOG_DEBUG << "========================= func section =========================" << std::endl;
   for (uint32_t i = 0; i < module_.func_.size(); i++) {
-    LOGGER << "func[" << i << "] signatureIndex = " << module_.func_[i].signatureIndex << LOGGER_END;
+    LOG_DEBUG << "func[" << i << "] signatureIndex = " << module_.func_[i].signatureIndex << std::endl;
   }
-  LOGGER << "========================= export section =========================" << LOGGER_END;
+  LOG_DEBUG << "========================= export section =========================" << std::endl;
   for (uint32_t i = 0; i < module_.export_.size(); i++) {
-    LOGGER << "export[" << i << "] name:\"" << module_.export_[i].exportName << "\" type = " << static_cast<uint32_t>(module_.export_[i].type)
-           << " index = " << module_.export_[i].funcIndex << LOGGER_END;
+    LOG_DEBUG << "export[" << i << "] name:\"" << module_.export_[i].exportName << "\" type = " << static_cast<uint32_t>(module_.export_[i].type)
+              << " index = " << module_.export_[i].funcIndex << std::endl;
   }
-  LOGGER << "========================= code section =========================" << LOGGER_END;
-  LOGGER << "function number = " << module_.functionInfos_.size() << LOGGER_END;
+  LOG_DEBUG << "========================= code section =========================" << std::endl;
+  LOG_DEBUG << "function number = " << module_.functionInfos_.size() << std::endl;
   for (uint32_t i = 0; i < module_.functionInfos_.size(); i++) {
-    LOGGER << "body[" << i << "] size = " << module_.functionInfos_[i].bodySize << " numLocalDecl = " << module_.functionInfos_[i].locals.size()
-           << LOGGER_END;
-    LOGGER << "Instructions:" << LOGGER_END;
+    LOG_DEBUG << "body[" << i << "] size = " << module_.functionInfos_[i].bodySize << " numLocalDecl = " << module_.functionInfos_[i].locals.size()
+              << std::endl;
+    LOG_DEBUG << "Instructions:" << std::endl;
     for (auto const &ins : module_.functionInfos_[i].ins) {
-      LOGGER << static_cast<uint32_t>(ins.opCode) << LOGGER_END;
+      LOG_DEBUG << static_cast<uint32_t>(ins.opCode) << std::endl;
     }
   }
-  LOGGER << "========================= name section =========================" << LOGGER_END;
+  LOG_DEBUG << "========================= name section =========================" << std::endl;
   for (uint32_t i = 0; i < module_.names_.size(); i++) {
-    LOGGER << "name[" << i << "] name " << module_.names_[i].name << "nameSubsectionType " << module_.names_[i].nameSubsectionType << LOGGER_END;
+    LOG_DEBUG << "name[" << i << "] name " << module_.names_[i].name << "nameSubsectionType " << module_.names_[i].nameSubsectionType << std::endl;
   }
 }
