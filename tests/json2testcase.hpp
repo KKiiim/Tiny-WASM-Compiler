@@ -1,3 +1,6 @@
+#ifndef TESTS_JSON2TESTCASE_HPP
+#define TESTS_JSON2TESTCASE_HPP
+
 #include <cstdint>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -79,3 +82,5 @@ public:
 };
 
 } // namespace spec
+
+#endif // TESTS_JSON2TESTCASE_HPP
