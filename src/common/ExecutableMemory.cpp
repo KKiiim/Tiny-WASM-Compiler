@@ -47,7 +47,7 @@ void ExecutableMemory::disassemble() const {
   cs_err err;
 
   if (cs_open(CS_ARCH_ARM64, CS_MODE_ARM, &handle) != CS_ERR_OK) {
-    std::cerr << "Capstone init failed" << std::endl;
+    LOG_ERROR << "Capstone init failed" << std::endl;
     return;
   }
   cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_OFF);
@@ -56,7 +56,7 @@ void ExecutableMemory::disassemble() const {
   size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(mem_), rawSize_, 0, 0, &insn);
 
   if (count <= 0) {
-    std::cerr << "disassemble failed" << std::endl;
+    LOG_ERROR << "disassemble failed" << std::endl;
     cs_close(&handle);
     return;
   }

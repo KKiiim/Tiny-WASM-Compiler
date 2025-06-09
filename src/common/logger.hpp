@@ -25,6 +25,6 @@ constexpr const char *ConsoleGray = "\033[90m";
 #define LOG_INFO std::cout << ConsoleNone
 #define LOG_GREEN std::cout << ConsoleGreen
 #define LOG_YELLOW std::cout << ConsoleYellow
-#define LOG_ERROR std::cout << ConsoleRed
+#define LOG_ERROR std::cerr << ConsoleRed
 
 #endif
