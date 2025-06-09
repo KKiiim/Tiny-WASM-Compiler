@@ -15,6 +15,7 @@
     "build:demo": "mkdir -p build && cd build && cmake -DENABLE_DEMO=1 -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc  -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ .. && make -j && cd ..",
     "build:spectest": "mkdir -p build && cd build && cmake -DENABLE_TEST=1 -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc  -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ .. && make -j && cd ..",
     "launch:qemu:debug": "qemu-aarch64 -g 123456 -L /usr/aarch64-linux-gnu ./build/bin/demo chapters/Chapter02/local.0.wasm",
+    "launch:spectest:debug": "qemu-aarch64 -g 123456 -L /usr/aarch64-linux-gnu ./build/bin/Spectest",
     "test:c2": "qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/bin/demo chapters/Chapter02/local.0.wasm",
     "preCommit": "npm run check:all && npm run build:demo"
   },
