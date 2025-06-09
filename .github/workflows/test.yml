@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: setup ubuntu
         run: |
-          sudo apt-get update && sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make clang-tidy nlohmann-json3-dev
+          sudo apt-get update && sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make clang-tidy wabt nlohmann-json3-dev
 
       - name: setup submodule
         run: |
@@ -40,6 +40,10 @@ jobs:
 
       - name: gtest spec
         run: |
-          wast2json tests/testcases/local.wast --output=tests/testcases/tmp/local.json
+          for wast_file in tests/testcases/*.wast; do
+            json_file="tests/testcases/tmp/$(basename "$wast_file" .wast).json"
+            wast2json "$wast_file" --output="$json_file"
+          done
+
           npm run build:spectest
           qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/bin/Spectest
