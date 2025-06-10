@@ -12,6 +12,7 @@
 #include "src/backend/aarch64_encoding.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/operand_stack.hpp"
+#include "src/common/stack.hpp"
 #include "src/common/wasm_type.hpp"
 
 ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
@@ -166,14 +167,13 @@ void Frontend::parseExportSection() {
 }
 void Frontend::parseCodeSection() {
   uint32_t const funcNumbers{br_.readLEB128<uint32_t>()};
-  uint32_t counter = 0U;
 
   // parse each function body
-  while (counter < funcNumbers) {
-    uint32_t const funcSignatureIndex{module_.func_[counter].signatureIndex};
+  for (uint32_t currentFuncIndex = 0U; currentFuncIndex < funcNumbers; ++currentFuncIndex) {
+    uint32_t const funcSignatureIndex{module_.func_[currentFuncIndex].signatureIndex};
     auto const &funcTypeInfo = module_.type_[funcSignatureIndex];
-    counter++;
 
+    stack_.push(StackElement{StackElement::ElementType::FUNC_START});
     ModuleInfo::FunctionInfo funcBody{};
     funcBody.startAddressOffset = backend_.emit.getCurrentOffset();
     funcBody.paramsNumber = funcTypeInfo.params.size();
@@ -195,7 +195,7 @@ void Frontend::parseCodeSection() {
 
     ////// Temporary variables of CURRENT function
     ///< record local's memory addr offset from SP in this function
-    ///< handle operand variables
+    ///< to handle operand variables
     // TODO(): should split to different class
     OP op{backend_};
     ///< checker of local operations
@@ -214,20 +214,16 @@ void Frontend::parseCodeSection() {
     if (stackUsage != 0U) {
       backend_.emit.decreaseSPWithClean(stackUsage);
     }
-    std::vector<ModuleInfo::WasmInstruction> instructions{};
-    while (true) {
-      ModuleInfo::WasmInstruction ins{};
+    while (br_.getOffset() < (preParseFuncBROffset + funcBodySize)) {
       OPCode const opcode = br_.readByte<OPCode>();
-      if (opcode == OPCode::END) {
-        break;
-      }
-      ins.opCode = opcode;
-      instructions.push_back(ins);
 
       switch (opcode) {
+      case OPCode::NOP: {
+        continue;
+      }
       case OPCode::RETURN: {
         // do check after END
-        break;
+        continue;
       }
       case OPCode::LOCAL_GET: {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
@@ -345,7 +341,7 @@ void Frontend::parseCodeSection() {
         validationStack.pop();
         assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
                "validation stack second top mismatch");
-        // don't pop again since result will be pushed
+        // don't pop again since the same type result will be pushed
 
         // Use R9 as right value scratch register
         op.subROP(is64bit);
@@ -360,13 +356,21 @@ void Frontend::parseCodeSection() {
         op.addROP(is64bit);
         break;
       }
+      case OPCode::END: {
+        if (stack_.top().type_ == StackElement::ElementType::FUNC_START) {
+          stack_.pop();
+          assert(br_.getOffset() == (preParseFuncBROffset + funcBodySize));
+          break;
+        } else {
+          // handle other block end
+          break;
+        }
+      }
       case OPCode::UNREACHABLE:
-      case OPCode::NOP:
       case OPCode::BLOCK:
       case OPCode::LOOP:
       case OPCode::IF:
       case OPCode::ELSE:
-      case OPCode::END:
       case OPCode::BR:
       case OPCode::BR_IF:
       case OPCode::BR_TABLE:
@@ -465,10 +469,8 @@ void Frontend::parseCodeSection() {
         break;
       }
     }
-    uint32_t const postParseFuncBROffset = br_.getOffset();
-    assert((postParseFuncBROffset - preParseFuncBROffset) == funcBodySize);
+    assert(br_.getOffset() == (preParseFuncBROffset + funcBodySize) && "must end with all code parsed");
 
-    funcBody.ins = std::move(instructions);
     module_.functionInfos_.push_back(std::move(funcBody));
 
     if (stackUsage != 0U) {
@@ -520,10 +522,6 @@ void Frontend::logParsedInfo() {
   for (uint32_t i = 0; i < module_.functionInfos_.size(); i++) {
     LOG_DEBUG << "body[" << i << "] size = " << module_.functionInfos_[i].bodySize << " numLocalDecl = " << module_.functionInfos_[i].locals.size()
               << std::endl;
-    LOG_DEBUG << "Instructions:" << std::endl;
-    for (auto const &ins : module_.functionInfos_[i].ins) {
-      LOG_DEBUG << static_cast<uint32_t>(ins.opCode) << std::endl;
-    }
   }
   LOG_DEBUG << "========================= name section =========================" << std::endl;
   for (uint32_t i = 0; i < module_.names_.size(); i++) {

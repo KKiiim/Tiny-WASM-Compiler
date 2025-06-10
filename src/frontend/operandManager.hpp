@@ -39,9 +39,6 @@ public:
 private:
   uint32_t size_;
   Arm64Backend &backend_;
-
-  // Max number of local variables in a function
-  static constexpr const uint32_t MAX_LOCAL_VARS = 8U;
 };
 
 #endif

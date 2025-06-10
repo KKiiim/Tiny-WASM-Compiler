@@ -27,12 +27,11 @@ public:
     uint32_t funcIndex;
   };
 
-  struct WasmInstruction {
-    OPCode opCode;
-    // others need supported
-  };
   struct LocalInfo {
     bool isParam;
+    /// @brief Offset relative to startAddressOffset of its belonging FunctionInfo
+    /// if param:        init with UINT32_MAX as placeholder
+    /// if normal local: init with the actual offset
     uint32_t offset;
     WasmType type;
   };
@@ -40,8 +39,7 @@ public:
     uint32_t bodySize; // does not contain itself
     uint32_t paramsNumber;
     std::vector<LocalInfo> locals; // params and locals
-    std::vector<WasmInstruction> ins;
-    uint32_t startAddressOffset; ///< Bytes offset from the start of the executable memory
+    uint32_t startAddressOffset;   ///< Bytes offset from the start of the executable memory
   };
   struct NameInfo {
     std::string name;
