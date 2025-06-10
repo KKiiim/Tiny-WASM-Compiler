@@ -75,13 +75,29 @@ void Emit::set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutputBina
   memcpy(&opcode, &data_[b_instructionPositionOffsetToOutputBinary], sizeof(OPCodeTemplate));
   // TODO(): Currently, only support b.cond
   assert((opcode & static_cast<OPCodeTemplate>(0x54000000)) == static_cast<OPCodeTemplate>(0x54000000));
-  LOG_YELLOW << "opcode before" << std::hex << static_cast<uint32_t>(opcode) << std::endl;
 
   // 0101 0100 imm19 0 cond(4)
   // 54000000
-  assert(((condOffset >= static_cast<int32_t>(-524288)) && (condOffset <= static_cast<int32_t>(0x7ffff))) &&
+  assert(((condOffset >= static_cast<int32_t>(-(0x7ffff + 1))) && (condOffset <= static_cast<int32_t>(0x7ffff))) &&
          "Offset out of range signed 19 for branch instruction");
   opcode |= (static_cast<OPCodeTemplate>(condOffset) & 0x7FFFFU) << 5U; // offset 5-24
+
+  memcpy(&data_[b_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
+}
+
+void Emit::set_b_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const offset) {
+  assert(size_ >= b_instructionPositionOffsetToOutputBinary + 4U && "must have the b instruction");
+
+  OPCodeTemplate opcode;
+  memcpy(&opcode, &data_[b_instructionPositionOffsetToOutputBinary], sizeof(OPCodeTemplate));
+  // TODO(): Currently, only support b
+  assert((opcode & static_cast<OPCodeTemplate>(0x14000000)) == static_cast<OPCodeTemplate>(0x14000000));
+
+  // 0001 01 imm26
+  // 0x14000000
+  assert(((offset >= static_cast<int32_t>(-(0x3ffffff + 1))) && (offset <= static_cast<int32_t>(0x3ffffff))) &&
+         "Offset out of range signed 26 for branch instruction");
+  opcode |= static_cast<OPCodeTemplate>(offset) & 0x3FFFFFFU;
 
   memcpy(&data_[b_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
 }

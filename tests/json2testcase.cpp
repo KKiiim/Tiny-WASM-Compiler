@@ -30,7 +30,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
   }
   auto jsonData_ = nlohmann::json::parse(jsonFile);
   std::string const sourceFilename = jsonData_["source_filename"].get<std::string>();
-  LOG_INFO << "Parse: " << sourceFilename << std::endl;
+  LOG_INFO << "Parse: " << sourceFilename << LOG_END;
 
   for (const auto &command : jsonData_["commands"]) {
     std::string const commandType = command["type"].get<std::string>();
@@ -68,7 +68,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
       testcase.expected = std::move(expectedParam);
       modules_[modules_.size() - 1].testCases.push_back(std::move(testcase));
     } else {
-      LOG_ERROR << "Unknown command type: " << commandType << std::endl;
+      LOG_ERROR << "Unknown command type: " << commandType << LOG_END;
       continue; // Skip unknown command types
     }
   }
@@ -79,30 +79,30 @@ void JsonReader::dump() const {
       "module", "assert_return", "invoke", "i32", "i64", "NONE",
   };
   for (const auto &module : modules_) {
-    LOG_INFO << "Module: " << module.moduleFileName << std::endl;
+    LOG_INFO << "Module: " << module.moduleFileName << LOG_END;
     for (const auto &testCase : module.testCases) {
-      LOG_INFO << "  Test Case Type: " << typeNames[static_cast<size_t>(testCase.commandType)] << std::endl;
-      LOG_INFO << "  Test Case Line: " << testCase.line << std::endl;
+      LOG_INFO << "  Test Case Type: " << typeNames[static_cast<size_t>(testCase.commandType)] << LOG_END;
+      LOG_INFO << "  Test Case Line: " << testCase.line << LOG_END;
       LOG_INFO << "  Action Type: " << typeNames[static_cast<size_t>(testCase.action.actionType)] << ", Function: " << testCase.action.functionName
-               << std::endl;
+               << LOG_END;
 
       if (testCase.action.args.size() == 0) {
-        LOG_INFO << "    No Args" << std::endl;
+        LOG_INFO << "    No Args" << LOG_END;
       }
       for (const auto &arg : testCase.action.args) {
         LOG_INFO << "    Arg Type: " << typeNames[static_cast<size_t>(arg.type)] << ", Value: " << (arg.type == Type::i32 ? arg.value32 : arg.value64)
-                 << std::endl;
+                 << LOG_END;
       }
 
       if (testCase.expected.ret.size() == 0) {
-        LOG_INFO << "    No Expected Params" << std::endl;
+        LOG_INFO << "    No Expected Params" << LOG_END;
       }
       for (const auto &expected : testCase.expected.ret) {
         LOG_INFO << "  Expected Type: " << typeNames[static_cast<size_t>(expected.type)]
-                 << ", Value: " << (expected.type == Type::i32 ? expected.value32 : expected.value64) << std::endl;
+                 << ", Value: " << (expected.type == Type::i32 ? expected.value32 : expected.value64) << LOG_END;
       }
 
-      LOG_INFO << std::endl;
+      LOG_INFO << LOG_END;
     }
   }
 }

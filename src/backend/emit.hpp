@@ -31,6 +31,7 @@ public:
   void decreaseSPWithClean(uint32_t const bytes);
 
   void set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const condOffset);
+  void set_b_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const offset);
 
 private:
   uint8_t *data_;

@@ -11,12 +11,12 @@ using namespace spec;
 
 TEST(Chapter02, local) {
   JsonReader const jsonReader("tests/testcases/tmp/local.json");
-  LOG_YELLOW << "Testing local.json" << std::endl;
+  LOG_YELLOW << "Testing local.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
     Compiler compiler;
     compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
 
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << std::endl;
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
     for (const auto &testCase : module.testCases) {
       execTest(testCase, compiler);
     }
@@ -25,12 +25,26 @@ TEST(Chapter02, local) {
 
 TEST(Chapter03, arithmetic) {
   JsonReader const jsonReader("tests/testcases/tmp/arithmetic.json");
-  LOG_YELLOW << ConsoleYellow << "Testing arithmetic.json" << std::endl;
+  LOG_YELLOW << ConsoleYellow << "Testing arithmetic.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
     Compiler compiler;
     compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
 
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << std::endl;
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
+    for (const auto &testCase : module.testCases) {
+      execTest(testCase, compiler);
+    }
+  }
+}
+
+TEST(Chapter05, if_) {
+  JsonReader const jsonReader("tests/testcases/tmp/if.json");
+  LOG_YELLOW << ConsoleYellow << "Testing if.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    Compiler compiler;
+    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
+
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
     for (const auto &testCase : module.testCases) {
       execTest(testCase, compiler);
     }

@@ -215,6 +215,6 @@ OPCodeTemplate prepare_b_cond(CC const condition) {
 OPCodeTemplate prepare_b() {
   // 0001 01 imm26
   // 14000000
-  OPCodeTemplate opcode = 0x14000000;
+  OPCodeTemplate const opcode = 0x14000000;
   return opcode;
 }

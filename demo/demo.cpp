@@ -10,6 +10,6 @@ int main(int argc, char *argv[]) {
   ExecutableMemory const &execMemory = compiler.compile(argv[1]);
   execMemory.disassemble();
 
-  uint32_t const ret32 = compiler.singleCallByName<uint32_t>("singular", "i(i)", 3U);
-  LOG_GREEN << "singular, i(i) = " << ret32 << std::endl;
+  uint32_t const ret32 = compiler.singleCallByName<uint32_t>("singular", "i(i)", 0U);
+  LOG_GREEN << "singular, i(i) = " << ret32 << LOG_END;
 }

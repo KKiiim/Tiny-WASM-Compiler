@@ -26,7 +26,7 @@ void execTest(TestCase const &testCase, Compiler &compiler) {
   } else {
     assert(false && "Expected only i32/i64 return value for now");
   }
-  LOG_GREEN << "Test case passed: " << testCase.action.functionName << " with signature: " << signature << std::endl;
+  LOG_GREEN << "Test case passed: " << testCase.action.functionName << " with signature: " << signature << LOG_END;
 }
 
 } // namespace spec
