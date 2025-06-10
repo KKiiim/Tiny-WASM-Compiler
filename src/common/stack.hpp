@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "src/common/wasm_type.hpp"
+
 class StackElement final {
 public:
   enum class ElementType : uint8_t {
@@ -14,7 +16,12 @@ public:
     ELSE,
     END,
   };
-  ElementType type_ = StackElement::ElementType::NONE;
+  ElementType elementType_ = StackElement::ElementType::NONE;
+
+  WasmType returnType_ = WasmType::INVALID;
+  ///< Point the start of the branch instruction as offset relative to the output binary.
+  // Used for relocation patching
+  uint32_t relpatchInsPos = 0;
 };
 
 class Stack final {

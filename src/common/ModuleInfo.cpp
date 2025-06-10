@@ -43,7 +43,7 @@ bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string con
     if (wasmType2SignatureType(funcTypeInfo.params[i]) == static_cast<SignatureType>(signature[sigIndex])) {
       sigIndex++;
     } else {
-      LOG_ERROR << "Signature parameter type does not match function parameter type at index " << std::to_string(i) << std::endl;
+      LOG_ERROR << "Signature parameter type does not match function parameter type at index " << std::to_string(i) << LOG_END;
       return false;
     }
   }

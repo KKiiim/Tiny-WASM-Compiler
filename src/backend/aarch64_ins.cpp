@@ -186,3 +186,35 @@ OPCodeTemplate mul_r_r(REG const destReg, REG const firstSrcReg, REG const secon
   opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
   return opcode;
 }
+
+OPCodeTemplate cmp_r_r(REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  // sf 110 1011 shift(2) 0 Rm imm(6) Rn Rd(11111)
+  // 6b00001f
+  OPCodeTemplate opcode = is64bit ? 0xeb00001f : 0x6b00001f;
+  opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
+  return opcode;
+}
+OPCodeTemplate cmp_r_imm(REG const firstSrcReg, uint32_t const imm, bool const is64bit) {
+  // sf 111 0001 0 sh(1) imm12 Rn Rd(11111)
+  // 7100001f
+  assert(imm <= 0xFFFU && "Immediate out of range 12");
+  OPCodeTemplate opcode = is64bit ? 0xf100001f : 0x7100001f;
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U); // source 5-9
+  opcode |= (imm & 0xFFFU) << 10U;                            // immediate value 10-21
+  return opcode;
+}
+
+OPCodeTemplate prepare_b_cond(CC const condition) {
+  // 0101 0100 imm19 0 cond(4)
+  // 54000000
+  OPCodeTemplate opcode = 0x54000000;               // B.cc
+  opcode |= static_cast<OPCodeTemplate>(condition); // condition 0-3
+  return opcode;
+}
+OPCodeTemplate prepare_b() {
+  // 0001 01 imm26
+  // 14000000
+  OPCodeTemplate const opcode = 0x14000000;
+  return opcode;
+}

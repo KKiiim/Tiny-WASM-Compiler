@@ -30,6 +30,9 @@ public:
   void emit_mov_w_imm32(REG const destReg, uint32_t const imm);
   void decreaseSPWithClean(uint32_t const bytes);
 
+  void set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const condOffset);
+  void set_b_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const offset);
+
 private:
   uint8_t *data_;
   uint32_t size_;

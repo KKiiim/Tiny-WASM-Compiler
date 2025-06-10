@@ -100,4 +100,10 @@ OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const
 
 OPCodeTemplate mul_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
 
+OPCodeTemplate cmp_r_r(REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
+OPCodeTemplate cmp_r_imm(REG const firstSrcReg, uint32_t const imm, bool const is64bit);
+
+OPCodeTemplate prepare_b_cond(CC const condition);
+OPCodeTemplate prepare_b();
+
 #endif // AARCH64_ENCODING_HPP

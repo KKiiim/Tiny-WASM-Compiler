@@ -25,7 +25,7 @@ ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
   if (bit_cast<uintptr_t>(mem_) % 4 != 0) {
     throw std::runtime_error("Memory is not 4-byte aligned");
   }
-  LOG_DEBUG << "mmap address: " << std::hex << bit_cast<uintptr_t>(mem_) << std::dec << std::endl;
+  LOG_DEBUG << "mmap address: " << std::hex << bit_cast<uintptr_t>(mem_) << std::dec << LOG_END;
 
   std::memcpy(mem_, data, size);
   // uint8_t *const fillNOPStart = static_cast<uint8_t *>(mem_) + size;
@@ -47,7 +47,7 @@ void ExecutableMemory::disassemble() const {
   cs_err err;
 
   if (cs_open(CS_ARCH_ARM64, CS_MODE_ARM, &handle) != CS_ERR_OK) {
-    LOG_ERROR << "Capstone init failed" << std::endl;
+    LOG_ERROR << "Capstone init failed" << LOG_END;
     return;
   }
   cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_OFF);
@@ -56,7 +56,7 @@ void ExecutableMemory::disassemble() const {
   size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(mem_), rawSize_, 0, 0, &insn);
 
   if (count <= 0) {
-    LOG_ERROR << "disassemble failed" << std::endl;
+    LOG_ERROR << "disassemble failed" << LOG_END;
     cs_close(&handle);
     return;
   }
@@ -68,7 +68,7 @@ void ExecutableMemory::disassemble() const {
     for (int j = 0; j < 4; j++) {
       LOG_INFO << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(insn[i].bytes[j]) << " ";
     }
-    LOG_INFO << " " << std::left << std::setw(8) << std::setfill(' ') << insn[i].mnemonic << insn[i].op_str << std::endl;
+    LOG_INFO << " " << std::left << std::setw(8) << std::setfill(' ') << insn[i].mnemonic << insn[i].op_str << LOG_END;
   }
 
   cs_free(insn, count);
