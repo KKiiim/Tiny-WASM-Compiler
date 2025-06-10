@@ -10,7 +10,7 @@
 
 class Compiler final {
 public:
-  explicit Compiler() : stack_(), frontend_(module_, stack_, operandStack_){};
+  explicit Compiler() : frontend_(module_, stack_, operandStack_){};
 
   ExecutableMemory &compile(std::string const &wasmPath);
   /// @brief Initialize the runtime environment, e.g., set up the operand stack start address

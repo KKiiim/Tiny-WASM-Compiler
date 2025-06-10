@@ -2,14 +2,32 @@
 #define SRC_COMMON_STACK_H
 
 #include <cstdint>
+#include <vector>
+
+class StackElement final {
+public:
+  enum class ElementType : uint8_t {
+    NONE,
+
+    FUNC_START,
+    IF,
+    ELSE,
+    END,
+  };
+  ElementType type_ = StackElement::ElementType::NONE;
+};
 
 class Stack final {
 public:
-  Stack() = default;
+  uint32_t push(StackElement const &element);
+  StackElement pop();
+  StackElement &top();
+  inline bool empty() const {
+    return v_.empty();
+  }
 
 private:
-  void *mem_;
-  uint32_t offset_;
+  std::vector<StackElement> v_;
 };
 
 #endif

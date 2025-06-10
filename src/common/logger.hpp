@@ -14,7 +14,7 @@ constexpr const char *ConsoleGray = "\033[90m";
 
 #define DISABLE_DEBUG_LOGS 1
 
-#ifdef DISABLE_DEBUG_LOGS
+#if DISABLE_DEBUG_LOGS
 // clang-format off
 #define LOG_DEBUG if(false) std::cout << ConsoleGray
 // clang-format on

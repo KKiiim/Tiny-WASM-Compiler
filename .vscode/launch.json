@@ -7,7 +7,7 @@
       "request": "launch",
       "program": "build/bin/Spectest",
       "miDebuggerPath": "/usr/bin/gdb-multiarch",
-      "miDebuggerServerAddress": "localhost:123456",
+      "miDebuggerServerAddress": "localhost:133456",
       "stopAtEntry": true,
       "setupCommands": [
         {
