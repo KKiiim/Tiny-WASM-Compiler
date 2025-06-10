@@ -21,7 +21,7 @@ public:
   WasmType returnType_ = WasmType::INVALID;
   ///< Point the start of the branch instruction as offset relative to the output binary.
   // Used for relocation patching
-  uint32_t positionOffset_of_ConditionInstruction = 0;
+  uint32_t relpatchInsPos = 0;
 };
 
 class Stack final {

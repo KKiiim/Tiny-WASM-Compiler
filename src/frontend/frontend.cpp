@@ -367,7 +367,7 @@ void Frontend::parseCodeSection() {
           // IF->B.c->TRUE_BLOCK->END->OTHER. Which means no ELSE branch
 
           ///< Link the B.c to OTHER(if false, jump to OTHER)
-          uint32_t const branchInsPosOff = stack_.top().positionOffset_of_ConditionInstruction;
+          uint32_t const branchInsPosOff = stack_.top().relpatchInsPos;
           uint32_t const afterIfOffset = backend_.emit.getCurrentOffset();
           // This offset pos pointed is behind the end of IF block(cond == false, no ELSE)
           assert(afterIfOffset > branchInsPosOff && "for IF->END case, always high address at end");
@@ -383,7 +383,7 @@ void Frontend::parseCodeSection() {
 
           ///< Link the B to OTHER(after exec TRUE_BLOCK, step the false part)
           // b ins position at the end of IF (cond == true) block
-          uint32_t const branchInsPosOff = stack_.top().positionOffset_of_ConditionInstruction;
+          uint32_t const branchInsPosOff = stack_.top().relpatchInsPos;
           uint32_t const afterELSEOffset = backend_.emit.getCurrentOffset();
           assert(afterELSEOffset > branchInsPosOff && "for IF->ELSE->END case, always high address at end");
           assert((afterELSEOffset - branchInsPosOff) % 4 == 0 && "must 4 times, arm ins always 4 bytes");
@@ -424,7 +424,7 @@ void Frontend::parseCodeSection() {
         backend_.emit.append(cmp_r_imm(REG::R9, 0U, is64bit));
         ///< Need relocation patching for branch offset.
         uint32_t const positionOffsetOfConditionInstruction = backend_.emit.getCurrentOffset();
-        stack_.top().positionOffset_of_ConditionInstruction = positionOffsetOfConditionInstruction;
+        stack_.top().relpatchInsPos = positionOffsetOfConditionInstruction;
         ///< Prepare B.c
         ///< Will be link(set off) when trigger ELSE or END
         backend_.emit.append(prepare_b_cond(CC::EQ));
@@ -442,10 +442,10 @@ void Frontend::parseCodeSection() {
         // This jump should emitted before ELSE branch code
         uint32_t const positionOffsetOfJumpInsStart = backend_.emit.getCurrentOffset();
         backend_.emit.append(prepare_b());
-        stack_.top().positionOffset_of_ConditionInstruction = positionOffsetOfJumpInsStart;
+        stack_.top().relpatchInsPos = positionOffsetOfJumpInsStart;
 
         ///< Link B.c to ELSE
-        uint32_t const branchInsPosOff = preIfElement.positionOffset_of_ConditionInstruction;
+        uint32_t const branchInsPosOff = preIfElement.relpatchInsPos;
         uint32_t const elseCodeStartOffset = backend_.emit.getCurrentOffset();
         // This offset pos pointed is behind the end of IF block(cond == false)
         assert(elseCodeStartOffset > branchInsPosOff && "for IF->ELSE case, always high address at end");
