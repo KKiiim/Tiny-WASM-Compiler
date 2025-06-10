@@ -175,6 +175,8 @@ void Frontend::parseCodeSection() {
 
     stack_.push(StackElement{StackElement::ElementType::FUNC_START});
     ModuleInfo::FunctionInfo funcBody{};
+    uint32_t const stackElementIndex = stack_.push(StackElement{StackElement::ElementType::FUNC_START});
+    funcBody.belongingBlockIndex = stackElementIndex;
     funcBody.startAddressOffset = backend_.emit.getCurrentOffset();
     funcBody.paramsNumber = funcTypeInfo.params.size();
     uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
@@ -357,20 +359,88 @@ void Frontend::parseCodeSection() {
         break;
       }
       case OPCode::END: {
-        if (stack_.top().type_ == StackElement::ElementType::FUNC_START) {
+        auto const lastStackElementType = stack_.top().elementType_;
+        if (lastStackElementType == StackElement::ElementType::FUNC_START) {
           stack_.pop();
           assert(br_.getOffset() == (preParseFuncBROffset + funcBodySize));
-          break;
+        } else if (lastStackElementType == StackElement::ElementType::IF) {
+          uint32_t const branchInsPosOff = stack_.top().positionOffset_of_ConditionInstruction;
+
+          // IF->END: means no ELSE branch
+          uint32_t const afterIfOffset = backend_.emit.getCurrentOffset();
+          // This offset pos pointed is behind the end of IF block(cond == false)
+          assert(afterIfOffset > branchInsPosOff && "for IF->END case, always high address at end");
+          assert((afterIfOffset - branchInsPosOff) % 4 == 0 && "must 4 times, arm ins always 4 bytes");
+
+          ///< B.cond. Its offset from the address of this instruction, in the range +/-1MB, is encoded as "imm19" times 4.
+          int32_t const condOffset = static_cast<int32_t>((afterIfOffset - branchInsPosOff) / 4);
+          backend_.emit.set_b_cond_off(branchInsPosOff, condOffset);
+
+          stack_.pop();
+
+        } else if (lastStackElementType == StackElement::ElementType::ELSE) {
+          stack_.pop(); // pop ELSE
+          assert(stack_.top().elementType_ == StackElement::ElementType::IF);
+          WasmType const ifReturnType = stack_.top().returnType_;
+          assert(ifReturnType == OperandStack::toWasmType(validationStack.top()));
+
+          stack_.pop(); // pop IF
         } else {
-          // handle other block end
-          break;
+          throw std::runtime_error("unexpected END opcode in function body");
         }
+        break;
+      }
+      case OPCode::IF: {
+        stack_.push(StackElement{StackElement::ElementType::IF});
+        WasmType const returnType = br_.readByte<WasmType>();
+        stack_.top().returnType_ = returnType;
+
+        // get condition value in R9
+        assert(!validationStack.empty());
+        bool const is64bit = (validationStack.top() == OperandStack::OperandType::I64);
+        op.subROP(is64bit);
+        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
+        validationStack.pop();
+
+        backend_.emit.append(cmp_r_imm(REG::R9, 0U, is64bit));
+        ///< Need relpatch for branch offset.
+        uint32_t const positionOffsetOfConditionInstruction = backend_.emit.getCurrentOffset();
+        stack_.top().positionOffset_of_ConditionInstruction = positionOffsetOfConditionInstruction;
+        backend_.emit.append(prepare_b_cond(CC::NE));
+        // continue parsing, wait the ELSE or END of IF
+        // if (cond != 0)
+        //    first emit true-block code
+        // ELSE
+        //    then emit false-block code
+        break;
+      }
+      case OPCode::ELSE: {
+        // IF->ELSE
+        auto const &preIfElement = stack_.top();
+        assert(preIfElement.elementType_ == StackElement::ElementType::IF);
+
+        // True branch of IF should jump to the END of ELSE branch code
+        // This jump should emitted before ELSE branch code
+        uint32_t const positionOffsetOfJumpInsStart = backend_.emit.getCurrentOffset();
+        backend_.emit.append(prepare_b());
+
+        uint32_t const branchInsPosOff = preIfElement.positionOffset_of_ConditionInstruction;
+        uint32_t const elseCodeStartOffset = backend_.emit.getCurrentOffset();
+        // This offset pos pointed is behind the end of IF block(cond == false)
+        assert(elseCodeStartOffset > branchInsPosOff && "for IF->ELSE case, always high address at end");
+        assert((elseCodeStartOffset - branchInsPosOff) % 4 == 0 && "must 4 times, arm ins always 4 bytes");
+
+        ///< B.cond. Its offset from the address of this instruction, in the range +/-1MB, is encoded as "imm19" times 4.
+        int32_t const condOffset = static_cast<int32_t>((elseCodeStartOffset - branchInsPosOff) / 4);
+        backend_.emit.set_b_cond_off(branchInsPosOff, condOffset);
+
+        stack_.push(StackElement{StackElement::ElementType::ELSE});
+
+        break;
       }
       case OPCode::UNREACHABLE:
       case OPCode::BLOCK:
       case OPCode::LOOP:
-      case OPCode::IF:
-      case OPCode::ELSE:
       case OPCode::BR:
       case OPCode::BR_IF:
       case OPCode::BR_TABLE:
@@ -478,6 +548,7 @@ void Frontend::parseCodeSection() {
     }
 
     if (funcTypeInfo.results.size() == 1U) {
+      LOG_YELLOW << "validationStack.size()=" << validationStack.size() << std::endl;
       assert(validationStack.size() == 1U && "validation stack should have one element for return value");
       assert(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0] && "validation stack top should be the return value type");
       validationStack.pop();

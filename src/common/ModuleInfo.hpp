@@ -40,6 +40,7 @@ public:
     uint32_t paramsNumber;
     std::vector<LocalInfo> locals; // params and locals
     uint32_t startAddressOffset;   ///< Bytes offset from the start of the executable memory
+    uint32_t belongingBlockIndex;  // index of stack element
   };
   struct NameInfo {
     std::string name;

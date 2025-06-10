@@ -25,7 +25,7 @@
       "request": "launch",
       "program": "build/bin/demo",
       "miDebuggerPath": "/usr/bin/gdb-multiarch",
-      "miDebuggerServerAddress": "localhost:123456",
+      "miDebuggerServerAddress": "localhost:12356",
       "stopAtEntry": true,
       "setupCommands": [
         {
