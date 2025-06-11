@@ -1,5 +1,4 @@
 #include <array>
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -48,7 +47,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
       // TODO(): support more action types
       action.actionType = command["action"]["type"].get<std::string>() == "invoke" ? Type::invoke : Type::NONE;
       action.functionName = command["action"]["field"].get<std::string>();
-      assert(command["action"]["args"].is_array() && "Expected action args to be an array");
+      confirm(command["action"]["args"].is_array(), "Expected action args to be an array");
       for (const auto &arg : command["action"]["args"]) {
         Param const param(arg);
         action.args.push_back(param);
@@ -56,12 +55,12 @@ JsonReader::JsonReader(const std::string &jsonPath) {
 
       ///< parse expected
       Expected expectedParam;
-      assert(command["expected"].is_array() && "Expected expected to be an array");
+      confirm(command["expected"].is_array(), "Expected expected to be an array");
       for (const auto &expected : command["expected"]) {
         Param const param(expected);
         expectedParam.ret.push_back(param);
       }
-      assert(((expectedParam.ret.size() == 0U) || (expectedParam.ret.size() == 1U)) && "Expected only one return value for now");
+      confirm(((expectedParam.ret.size() == 0U) || (expectedParam.ret.size() == 1U)), "Expected only one return value for now");
 
       ///< set parsed sections to testcase
       testcase.action = std::move(action);
@@ -121,7 +120,7 @@ std::string TestCase::getSignature() const {
 }
 
 void TestCase::setParams(std::array<uint64_t, MaxParamsForWasmFunction> &params) const {
-  assert(params.size() >= action.args.size() && "Params array size must be at least as large as action args size");
+  confirm(params.size() >= action.args.size(), "Params array size must be at least as large as action args size");
   for (uint32_t i = 0; i < action.args.size(); i++) {
     params[i] = (action.args[i].type == Type::i32) ? static_cast<uint64_t>(action.args[i].value32) : static_cast<uint64_t>(action.args[i].value64);
   }

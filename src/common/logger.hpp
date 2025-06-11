@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-// log colors
+///< Log Wrapper
 constexpr const char *ConsoleRed = "\033[31m";
 constexpr const char *ConsoleGreen = "\033[32m";
 constexpr const char *ConsoleYellow = "\033[33m";
@@ -28,5 +28,16 @@ constexpr const char *ConsoleGray = "\033[90m";
 #define LOG_ERROR std::cerr << ConsoleRed
 
 #define LOG_END std::endl << ConsoleNone
+
+///< Assert Wrapper
+#if defined(__linux__)
+#define confirm(check, msg)                                                                                                                          \
+  if (!(check)) {                                                                                                                                    \
+    LOG_ERROR << "assert failed in " << __FILE__ << ":" << __LINE__ << ": " << ConsoleNone << (msg) << LOG_END;                                      \
+    abort();                                                                                                                                         \
+  }
+#else
+#define cdc_assert(check, msg)
+#endif
 
 #endif

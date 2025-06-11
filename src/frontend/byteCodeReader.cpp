@@ -1,9 +1,10 @@
-#include <cassert>
 #include <fstream>
 #include <string>
 #include <vector>
 
 #include "byteCodeReader.hpp"
+
+#include "src/common/logger.hpp"
 
 void BytecodeReader::readWasmBinary(std::string const &wasmPath) {
   std::ifstream file(wasmPath, std::ios::binary | std::ios::ate);
@@ -40,7 +41,7 @@ uint64_t BytecodeReader::readLEU64() {
 }
 
 uint64_t BytecodeReader::readLEB128(bool const signedInt, uint32_t const maxBits) {
-  assert(maxBits <= 64U && "maxBits longer than 64 bits");
+  confirm(maxBits <= 64U, "maxBits longer than 64 bits");
   uint64_t result{0U};
   uint32_t bitsWritten{0U};
   uint8_t byte{0xFFU};
