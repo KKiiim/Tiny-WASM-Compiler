@@ -1,4 +1,3 @@
-#include <cassert>
 #include <stdexcept>
 
 #include "ModuleInfo.hpp"
@@ -23,13 +22,13 @@ SignatureType ModuleInfo::wasmType2SignatureType(WasmType const type) const {
 bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string const &signature) const {
   uint32_t const signatureIndex = func_[functionIndex].signatureIndex;
   auto const &funcTypeInfo = type_[signatureIndex];
-  assert(signature.size() >= 2U && "signature must have at least 2 characters '(' and ')'");
-  assert(((funcTypeInfo.results.size() + funcTypeInfo.params.size()) == (signature.size() - 2U)) &&
-         "Signature should match the number of parameters in the function type");
+  confirm(signature.size() >= 2U, "signature must have at least 2 characters '(' and ')'");
+  confirm(((funcTypeInfo.results.size() + funcTypeInfo.params.size()) == (signature.size() - 2U)),
+          "Signature should match the number of parameters in the function type");
 
   SignatureType const signaturePrefixType = static_cast<SignatureType>(signature[0]);
   if (funcTypeInfo.results.empty()) {
-    assert(signaturePrefixType == SignatureType::PARAMSTART && "Signature should start with '(' when there are no results");
+    confirm(signaturePrefixType == SignatureType::PARAMSTART, "Signature should start with '(' when there are no results");
   } else {
     SignatureType const retType = wasmType2SignatureType(funcTypeInfo.results[0]);
     if (signaturePrefixType != retType) {
@@ -47,6 +46,6 @@ bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string con
       return false;
     }
   }
-  assert(static_cast<SignatureType>(signature[sigIndex]) == SignatureType::PARAMEND && "Signature should end with ')' after parameters");
+  confirm(static_cast<SignatureType>(signature[sigIndex]) == SignatureType::PARAMEND, "Signature should end with ')' after parameters");
   return true;
 }

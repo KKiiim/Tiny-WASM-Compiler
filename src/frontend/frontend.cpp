@@ -1,5 +1,4 @@
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <stack>
 #include <stdexcept>
@@ -121,15 +120,15 @@ void Frontend::parseTypeSection() {
     while (paramIndex++ < paramsNum) {
       paramInfos.push_back(br_.readByte<WasmType>());
     }
-    assert(paramsNum == paramInfos.size() && "must");
+    confirm(paramsNum == paramInfos.size(), "must");
 
     uint32_t const resultNum = br_.readLEB128<uint32_t>();
     uint32_t resultIndex = 0U;
     while (resultIndex++ < resultNum) {
       resultInfos.push_back(br_.readByte<WasmType>());
     }
-    assert(resultNum == resultInfos.size() && "must");
-    assert(resultInfos.size() <= 1U && "only one result supported");
+    confirm(resultNum == resultInfos.size(), "must");
+    confirm(resultInfos.size() <= 1U, "only one result supported");
 
     module_.type_.push_back({paramInfos, resultInfos});
   }
@@ -159,7 +158,7 @@ void Frontend::parseExportSection() {
     WasmImportExportType const type{br_.readByte<WasmImportExportType>()};
     uint32_t const index = br_.readLEB128<uint32_t>();
 
-    assert(type == WasmImportExportType::FUNC && "only function export supported yet");
+    confirm(type == WasmImportExportType::FUNC, "only function export supported yet");
 
     module_.export_.push_back({exportName, type, index});
     module_.exportFuncNameToIndex_[exportName] = index;
@@ -234,7 +233,7 @@ void Frontend::parseCodeSection() {
         validationStack.push(is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32);
         if (l.isParam) {
           // param in register. Assumed params <= 8
-          assert(localIdx < funcTypeInfo.params.size());
+          confirm(localIdx < funcTypeInfo.params.size(), "");
           op.get_r_param(localIdx, is64bit);
         } else {
           // local
@@ -245,19 +244,19 @@ void Frontend::parseCodeSection() {
       }
       case OPCode::LOCAL_SET:
       case OPCode::LOCAL_TEE: {
-        assert(validationStack.size() != 0U);
+        confirm(validationStack.size() != 0U, "");
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
         auto const topType = validationStack.top();
-        assert(operandStack_.toWasmType(topType) == l.type && "must");
+        confirm(operandStack_.toWasmType(topType) == l.type, "must");
         // local.tee don't pop operand stack element
         if (opcode == OPCode::LOCAL_SET) {
           validationStack.pop();
         }
 
         if (l.isParam) {
-          assert(localIdx < funcTypeInfo.params.size());
-          assert(l.type == funcTypeInfo.params[localIdx]);
+          confirm(localIdx < funcTypeInfo.params.size(), "");
+          confirm(l.type == funcTypeInfo.params[localIdx], "");
           op.set_r_param(localIdx, topType == OperandStack::OperandType::I64, opcode == OPCode::LOCAL_TEE);
         } else {
           uint32_t const offset2SP = l.offset;
@@ -287,12 +286,12 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_ADD: {
         bool const is64bit = (opcode == OPCode::I64_ADD);
 
-        assert(validationStack.size() >= 2U && "validation stack should have at least two elements for I32_ADD");
-        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
-               "validation stack top mismatch");
+        confirm(validationStack.size() >= 2U, "validation stack should have at least two elements for I32_ADD");
+        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
+                "validation stack top mismatch");
         validationStack.pop();
-        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
-               "validation stack second top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
+                "validation stack second top mismatch");
         // don't pop again since result will be pushed
 
         // Use R9 as right value scratch register
@@ -312,12 +311,12 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_SUB: {
         bool const is64bit = (opcode == OPCode::I64_SUB);
 
-        assert(validationStack.size() >= 2U && "validation stack should have at least two elements for Ixx_SUB");
-        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
-               "validation stack top mismatch");
+        confirm(validationStack.size() >= 2U, "validation stack should have at least two elements for Ixx_SUB");
+        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
+                "validation stack top mismatch");
         validationStack.pop();
-        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
-               "validation stack second top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
+                "validation stack second top mismatch");
         // don't pop again since result will be pushed
 
         // Use R9 as right value scratch register
@@ -337,12 +336,12 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_MUL: {
         bool const is64bit = (opcode == OPCode::I64_MUL);
 
-        assert(validationStack.size() >= 2U && "validation stack should have at least two elements for Ixx_MUL");
-        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
-               "validation stack top mismatch");
+        confirm(validationStack.size() >= 2U, "validation stack should have at least two elements for Ixx_MUL");
+        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
+                "validation stack top mismatch");
         validationStack.pop();
-        assert((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)) &&
-               "validation stack second top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
+                "validation stack second top mismatch");
         // don't pop again since the same type result will be pushed
 
         // Use R9 as right value scratch register
@@ -362,7 +361,7 @@ void Frontend::parseCodeSection() {
         auto const lastStackElementType = stack_.top().elementType_;
         if (lastStackElementType == StackElement::ElementType::FUNC_START) {
           stack_.pop();
-          assert(br_.getOffset() == (preParseFuncBROffset + funcBodySize));
+          confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "");
         } else if (lastStackElementType == StackElement::ElementType::IF) {
           // IF->B.c->TRUE_BLOCK->END->OTHER. Which means no ELSE branch
 
@@ -370,8 +369,8 @@ void Frontend::parseCodeSection() {
           uint32_t const branchInsPosOff = stack_.top().relpatchInsPos;
           uint32_t const afterIfOffset = backend_.emit.getCurrentOffset();
           // This offset pos pointed is behind the end of IF block(cond == false, no ELSE)
-          assert(afterIfOffset > branchInsPosOff && "for IF->END case, always high address at end");
-          assert((afterIfOffset - branchInsPosOff) % 4 == 0 && "must 4 times, arm ins always 4 bytes");
+          confirm(afterIfOffset > branchInsPosOff, "for IF->END case, always high address at end");
+          confirm((afterIfOffset - branchInsPosOff) % 4 == 0, "must 4 times, arm ins always 4 bytes");
           ///< B.cond. Its offset from the address of this instruction, in the range +/-1MB, is encoded as "imm19" times 4.
           int32_t const condOffset = static_cast<int32_t>((afterIfOffset - branchInsPosOff) / 4);
           backend_.emit.set_b_cond_off(branchInsPosOff, condOffset);
@@ -385,18 +384,18 @@ void Frontend::parseCodeSection() {
           // b ins position at the end of IF (cond == true) block
           uint32_t const branchInsPosOff = stack_.top().relpatchInsPos;
           uint32_t const afterELSEOffset = backend_.emit.getCurrentOffset();
-          assert(afterELSEOffset > branchInsPosOff && "for IF->ELSE->END case, always high address at end");
-          assert((afterELSEOffset - branchInsPosOff) % 4 == 0 && "must 4 times, arm ins always 4 bytes");
+          confirm(afterELSEOffset > branchInsPosOff, "for IF->ELSE->END case, always high address at end");
+          confirm((afterELSEOffset - branchInsPosOff) % 4 == 0, "must 4 times, arm ins always 4 bytes");
           int32_t const condOffset = static_cast<int32_t>((afterELSEOffset - branchInsPosOff) / 4);
           backend_.emit.set_b_off(branchInsPosOff, condOffset);
 
           stack_.pop(); // pop ELSE
-          assert(stack_.top().elementType_ == StackElement::ElementType::IF);
+          confirm(stack_.top().elementType_ == StackElement::ElementType::IF, "");
 
           ///< Only debug use. returnType_ in stackElement is useless currently
           WasmType const ifReturnType = stack_.top().returnType_;
           if (ifReturnType != WasmType::TVOID) {
-            assert(ifReturnType == OperandStack::toWasmType(validationStack.top()));
+            confirm(ifReturnType == OperandStack::toWasmType(validationStack.top()), "");
           }
 
           stack_.pop(); // pop IF
@@ -415,7 +414,7 @@ void Frontend::parseCodeSection() {
         stack_.top().returnType_ = returnType;
 
         // get condition value in R9
-        assert(!validationStack.empty());
+        confirm(!validationStack.empty(), "");
         bool const is64bit = (validationStack.top() == OperandStack::OperandType::I64);
         op.subROP(is64bit);
         backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
@@ -434,7 +433,7 @@ void Frontend::parseCodeSection() {
         // IF->B.c->TRUE_BLOCK->B->ELSE->FALSE_BLOCK->END->OTHER
 
         auto const &preIfElement = stack_.top();
-        assert(preIfElement.elementType_ == StackElement::ElementType::IF);
+        confirm(preIfElement.elementType_ == StackElement::ElementType::IF, "");
         stack_.push(StackElement{StackElement::ElementType::ELSE});
 
         ///< Prepare B
@@ -448,8 +447,8 @@ void Frontend::parseCodeSection() {
         uint32_t const branchInsPosOff = preIfElement.relpatchInsPos;
         uint32_t const elseCodeStartOffset = backend_.emit.getCurrentOffset();
         // This offset pos pointed is behind the end of IF block(cond == false)
-        assert(elseCodeStartOffset > branchInsPosOff && "for IF->ELSE case, always high address at end");
-        assert((elseCodeStartOffset - branchInsPosOff) % 4 == 0 && "must 4 times, arm ins always 4 bytes");
+        confirm(elseCodeStartOffset > branchInsPosOff, "for IF->ELSE case, always high address at end");
+        confirm((elseCodeStartOffset - branchInsPosOff) % 4 == 0, "must 4 times, arm ins always 4 bytes");
         ///< B.cond. Its offset from the address of this instruction, in the range +/-1MB, is encoded as "imm19" times 4.
         int32_t const condOffset = static_cast<int32_t>((elseCodeStartOffset - branchInsPosOff) / 4);
         backend_.emit.set_b_cond_off(branchInsPosOff, condOffset);
@@ -556,7 +555,7 @@ void Frontend::parseCodeSection() {
         break;
       }
     }
-    assert(br_.getOffset() == (preParseFuncBROffset + funcBodySize) && "must end with all code parsed");
+    confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "must end with all code parsed");
 
     module_.functionInfos_.push_back(std::move(funcBody));
 
@@ -568,7 +567,7 @@ void Frontend::parseCodeSection() {
       // FIX: bug in issue
       // LOG_YELLOW << "validationStack.size()=" << validationStack.size() << LOG_END;
       // assert(validationStack.size() == 1U && "validation stack should have one element for return value");
-      assert(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0] && "validation stack top should be the return value type");
+      confirm(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0], "validation stack top should be the return value type");
       validationStack.pop();
 
       bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
@@ -581,7 +580,7 @@ void Frontend::parseCodeSection() {
     backend_.emit.append(insRET);
   }
 
-  assert(funcNumbers == module_.functionInfos_.size() && "parse code functionBodys exception");
+  confirm(funcNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");
 }
 void Frontend::parseNameSection() {
   // uint32_t const stringLength = br_.readLEB128<uint32_t>();

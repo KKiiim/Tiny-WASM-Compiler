@@ -1,7 +1,8 @@
-#include <cassert>
 #include <cstdint>
 
 #include "aarch64_encoding.hpp"
+
+#include "src/common/logger.hpp"
 
 OPCodeTemplate str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit) {
   // Encoding for the 32-bit variant
@@ -13,7 +14,7 @@ OPCodeTemplate str_base_off(REG const addrReg, REG const srcReg, uint32_t const 
 
   // 1x 11 1001 00 imm12 Rn Rt
   // F9000000
-  assert(offset <= 0xFFFU && "Immediate out of range");
+  confirm(offset <= 0xFFFU, "Immediate out of range");
   OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000;
   opcode |= static_cast<OPCodeTemplate>(srcReg);
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
@@ -28,7 +29,7 @@ OPCodeTemplate ldr_base_off(REG const destReg, REG const addrReg, uint32_t const
 
   // 1x 111001 01 imm12 Rn Rt
   // F9400000 B9400000
-  assert(offset <= 0xFFFU && "Immediate out of range");
+  confirm(offset <= 0xFFFU, "Immediate out of range");
   OPCodeTemplate opcode = is64bit ? 0xF9400000 : 0xB9400000;
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U); // addr 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);         // dest 0-4
@@ -40,7 +41,7 @@ OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const u
   // 0001 0001 00 imm12 00000 00000
   // 11000000
   // shift default set 0
-  assert(is64bit && "currently always use full register 64bits");
+  confirm(is64bit, "currently always use full register 64bits");
   OPCodeTemplate opcode = is64bit ? 0x91000000 : 0x11000000; // ADD Xd, Xn, #imm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U);     // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);            // dest 0-4
@@ -48,7 +49,7 @@ OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const u
   return opcode;
 }
 OPCodeTemplate add_r_r_extendedR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
-  assert(false && "don't know how to use yet");
+  confirm(false, "don't know how to use yet");
   // TODO(): can support shift and other extend features
   // sf 000 1011 001 Rm option(3) immShift(3) Rn Rd
   // 0b200000
@@ -73,7 +74,7 @@ OPCodeTemplate add_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG cons
   return opcode;
 }
 OPCodeTemplate adc_r_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
-  assert(false && "don't know how to use yet");
+  confirm(false, "don't know how to use yet");
   // sf 001101 0000 Rm 000000 Rn Rd
   // 0001 1010 000 Rm 000000 Rn Rd
   // 1a000000
@@ -89,7 +90,7 @@ OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const i
   // 61000000
   // 1101 0001 0000
   // d1000000
-  assert(is64bit && "currently always use full register 64bits");
+  confirm(is64bit, "currently always use full register 64bits");
   OPCodeTemplate opcode = 0xd1000000;                    // SUB Xd, Xn, #imm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
@@ -97,7 +98,7 @@ OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const i
   return opcode;
 }
 OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg) {
-  assert(false && "not implemented");
+  confirm(false, "not implemented");
 
   OPCodeTemplate opcode = 0x4B000000; // SUB Xd, Xn, Xm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U);
@@ -125,7 +126,7 @@ OPCodeTemplate dec_sp(uint32_t const imm) {
   return sub_r_r_imm(REG::SP, REG::SP, imm, true);
 }
 OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg) {
-  assert(false && "not implemented");
+  confirm(false, "not implemented");
 
   // OPCodeTemplate opcode = is64bit ? 0xAA0003E0 : 0x2A0003E0;
   OPCodeTemplate opcode = 0x2A0003E0;                    // MOV Xd, Xn
@@ -149,9 +150,9 @@ OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const
   "32-bit": 0 (the default) or 16, encoded in the "hw" field as <shift>/16.
   "64-bit": 0 (the default), 16, 32 or 48, encoded in the "hw" field as <shift>/16.
   */
-  assert(imm <= 0xFFFFU && "Immediate out of range");
+  confirm(imm <= 0xFFFFU, "Immediate out of range");
   OPCodeTemplate opcode = is64bit ? 0xf2800000 : 0x72800000;
-  assert(shift <= (is64bit ? 3U : 1U) && "Shift out of range");
+  confirm(shift <= (is64bit ? 3U : 1U), "Shift out of range");
   opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
   opcode |= (shift & 0x3U) << 21U;                  // shift value 21-22
@@ -164,7 +165,7 @@ OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm, bool const is6
   // 0xd280000
   // 1011 0010 0000
   // 1 01 100100
-  assert(imm <= 0xFFFFU && "Immediate out of range");
+  confirm(imm <= 0xFFFFU, "Immediate out of range");
   OPCodeTemplate opcode = is64bit ? 0xd2800000 : 0x52800000;
   opcode |= (static_cast<OPCodeTemplate>(destReg)); // dest 0-4
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
@@ -198,7 +199,7 @@ OPCodeTemplate cmp_r_r(REG const firstSrcReg, REG const secondSrcReg, bool const
 OPCodeTemplate cmp_r_imm(REG const firstSrcReg, uint32_t const imm, bool const is64bit) {
   // sf 111 0001 0 sh(1) imm12 Rn Rd(11111)
   // 7100001f
-  assert(imm <= 0xFFFU && "Immediate out of range 12");
+  confirm(imm <= 0xFFFU, "Immediate out of range 12");
   OPCodeTemplate opcode = is64bit ? 0xf100001f : 0x7100001f;
   opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U); // source 5-9
   opcode |= (imm & 0xFFFU) << 10U;                            // immediate value 10-21
