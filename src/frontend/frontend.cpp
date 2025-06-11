@@ -454,6 +454,55 @@ void Frontend::parseCodeSection() {
         as_.set_b_cond_off(branchInsPosOff, condOffset);
         break;
       }
+      case OPCode::I32_DIV_S:
+      case OPCode::I32_DIV_U:
+      case OPCode::I64_DIV_S:
+      case OPCode::I64_DIV_U: {
+        // Design:
+        // Active Protect if div 0. Reuse the try-catch wrapper in C++ to store-load the callee-saved regs.
+        //
+        // In JIT:
+        // mov x0, trapcode
+        // brk #1234
+        //
+        // In signal_handler, check si_code==1234 to confirm it is jit's trap
+        // Read trapcode from x0, throw and catched by the C++ try-catch wrapper
+        //
+        ///< Can extended to support like: use another reg for trapped wat line
+        //
+        // class JitTrapException : public std::exception {
+        //   uint64_t trapcode;
+        // public:
+        //   JitTrapException(uint64_t code) : trapcode(code) {
+        //   }
+        //   const char *what() const noexcept override {
+        //     return "JIT trap with custom code";
+        //   }
+        //   uint64_t code() const {
+        //     return trapcode;
+        //   }
+        // };
+        // void signal_handler(int sig, siginfo_t *info, void *ucontext) {
+        //   ucontext_t *ctx = (ucontext_t *)ucontext;
+        //   uint64_t trapcode = ctx->uc_mcontext.regs[0];
+        //   throw JitTrapException(trapcode);
+        // }
+        // void register_handlers() {
+        //   struct sigaction sa;
+        //   sa.sa_sigaction = signal_handler;
+        //   sa.sa_flags = SA_SIGINFO;
+        //   sigaction(SIGTRAP, &sa, nullptr);
+        // }
+        // int main() {
+        //   register_handlers();
+        //   try {
+        //     jit_trap_code();
+        //   } catch (const JitTrapException &e) {
+        //     std::cerr << "Caught JIT trap. Code: 0x" << std::hex << e.code() << std::endl;
+        //   }
+        // }
+        break;
+      }
       case OPCode::UNREACHABLE:
       case OPCode::BLOCK:
       case OPCode::LOOP:
@@ -524,8 +573,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_CLZ:
       case OPCode::I32_CTZ:
       case OPCode::I32_POPCNT:
-      case OPCode::I32_DIV_S:
-      case OPCode::I32_DIV_U:
       case OPCode::I32_REM_S:
       case OPCode::I32_REM_U:
       case OPCode::I32_AND:
@@ -539,8 +586,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_CLZ:
       case OPCode::I64_CTZ:
       case OPCode::I64_POPCNT:
-      case OPCode::I64_DIV_S:
-      case OPCode::I64_DIV_U:
       case OPCode::I64_REM_S:
       case OPCode::I64_REM_U:
       case OPCode::I64_AND:
