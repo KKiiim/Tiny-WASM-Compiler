@@ -79,7 +79,7 @@ ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
 
   // logParsedInfo();
 
-  return backend_.emit.getExecutableMemory();
+  return as_.getExecutableMemory();
 }
 
 void Frontend::validateMagicNumber() {
@@ -176,7 +176,7 @@ void Frontend::parseCodeSection() {
     ModuleInfo::FunctionInfo funcBody{};
     uint32_t const stackElementIndex = stack_.push(StackElement{StackElement::ElementType::FUNC_START});
     funcBody.belongingBlockIndex = stackElementIndex;
-    funcBody.startAddressOffset = backend_.emit.getCurrentOffset();
+    funcBody.startAddressOffset = as_.getCurrentOffset();
     funcBody.paramsNumber = funcTypeInfo.params.size();
     uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
     funcBody.bodySize = funcBodySize;
@@ -198,7 +198,7 @@ void Frontend::parseCodeSection() {
     ///< record local's memory addr offset from SP in this function
     ///< to handle operand variables
     // TODO(): should split to different class
-    OP op{backend_};
+    OP op{as_};
     ///< checker of local operations
     std::stack<OperandStack::OperandType> validationStack{};
 
@@ -213,7 +213,7 @@ void Frontend::parseCodeSection() {
     uint32_t const stackUsage = op.getAlignedSize();
     LOG_DEBUG << "stackUsage = " << stackUsage << LOG_END;
     if (stackUsage != 0U) {
-      backend_.emit.decreaseSPWithClean(stackUsage);
+      as_.decreaseSPWithClean(stackUsage);
     }
     while (br_.getOffset() < (preParseFuncBROffset + funcBodySize)) {
       OPCode const opcode = br_.readByte<OPCode>();
@@ -268,18 +268,18 @@ void Frontend::parseCodeSection() {
         uint32_t const v = bit_cast<uint32_t>(br_.readLEB128<int32_t>());
         validationStack.push(OperandStack::OperandType::I32);
         // Use W9 as scratch register
-        backend_.emit.emit_mov_w_imm32(REG::R9, v);
-        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, false));
-        backend_.emit.append(add_r_r_imm(ROP, ROP, 4U, true));
+        as_.emit_mov_w_imm32(REG::R9, v);
+        as_.str_base_off(ROP, REG::R9, 0U, false);
+        as_.add_r_r_imm(ROP, ROP, 4U, true);
         break;
       }
       case OPCode::I64_CONST: {
         uint64_t const v = bit_cast<uint64_t>(br_.readLEB128<int64_t>());
         validationStack.push(OperandStack::OperandType::I64);
         // Use W9 as scratch register
-        backend_.emit.emit_mov_x_imm64(REG::R9, v);
-        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, true));
-        backend_.emit.append(add_r_r_imm(ROP, ROP, 8U, true));
+        as_.emit_mov_x_imm64(REG::R9, v);
+        as_.str_base_off(ROP, REG::R9, 0U, true);
+        as_.add_r_r_imm(ROP, ROP, 8U, true);
         break;
       }
       case OPCode::I32_ADD:
@@ -296,14 +296,14 @@ void Frontend::parseCodeSection() {
 
         // Use R9 as right value scratch register
         op.subROP(is64bit);
-        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
         // Use R10 as left value scratch register
-        backend_.emit.append(ldr_base_off(REG::R10, ROP, 0U, is64bit));
-        backend_.emit.append(add_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit));
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.add_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit);
 
         // Store result to ROP
-        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, is64bit));
+        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         break;
       }
@@ -321,14 +321,14 @@ void Frontend::parseCodeSection() {
 
         // Use R9 as right value scratch register
         op.subROP(is64bit);
-        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
         // Use R10 as left value scratch register
-        backend_.emit.append(ldr_base_off(REG::R10, ROP, 0U, is64bit));
-        backend_.emit.append(sub_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit));
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.sub_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit);
 
         // Store result to ROP
-        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, is64bit));
+        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         break;
       }
@@ -346,14 +346,14 @@ void Frontend::parseCodeSection() {
 
         // Use R9 as right value scratch register
         op.subROP(is64bit);
-        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
         // Use R10 as left value scratch register
-        backend_.emit.append(ldr_base_off(REG::R10, ROP, 0U, is64bit));
-        backend_.emit.append(mul_r_r(REG::R9, REG::R10, REG::R9, is64bit));
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.mul_r_r(REG::R9, REG::R10, REG::R9, is64bit);
 
         // Store result to ROP
-        backend_.emit.append(str_base_off(ROP, REG::R9, 0U, is64bit));
+        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         break;
       }
@@ -367,13 +367,13 @@ void Frontend::parseCodeSection() {
 
           ///< Link the B.c to OTHER(if false, jump to OTHER)
           uint32_t const branchInsPosOff = stack_.top().relpatchInsPos;
-          uint32_t const afterIfOffset = backend_.emit.getCurrentOffset();
+          uint32_t const afterIfOffset = as_.getCurrentOffset();
           // This offset pos pointed is behind the end of IF block(cond == false, no ELSE)
           confirm(afterIfOffset > branchInsPosOff, "for IF->END case, always high address at end");
           confirm((afterIfOffset - branchInsPosOff) % 4 == 0, "must 4 times, arm ins always 4 bytes");
           ///< B.cond. Its offset from the address of this instruction, in the range +/-1MB, is encoded as "imm19" times 4.
           int32_t const condOffset = static_cast<int32_t>((afterIfOffset - branchInsPosOff) / 4);
-          backend_.emit.set_b_cond_off(branchInsPosOff, condOffset);
+          as_.set_b_cond_off(branchInsPosOff, condOffset);
 
           stack_.pop();
 
@@ -383,11 +383,11 @@ void Frontend::parseCodeSection() {
           ///< Link the B to OTHER(after exec TRUE_BLOCK, step the false part)
           // b ins position at the end of IF (cond == true) block
           uint32_t const branchInsPosOff = stack_.top().relpatchInsPos;
-          uint32_t const afterELSEOffset = backend_.emit.getCurrentOffset();
+          uint32_t const afterELSEOffset = as_.getCurrentOffset();
           confirm(afterELSEOffset > branchInsPosOff, "for IF->ELSE->END case, always high address at end");
           confirm((afterELSEOffset - branchInsPosOff) % 4 == 0, "must 4 times, arm ins always 4 bytes");
           int32_t const condOffset = static_cast<int32_t>((afterELSEOffset - branchInsPosOff) / 4);
-          backend_.emit.set_b_off(branchInsPosOff, condOffset);
+          as_.set_b_off(branchInsPosOff, condOffset);
 
           stack_.pop(); // pop ELSE
           confirm(stack_.top().elementType_ == StackElement::ElementType::IF, "");
@@ -417,16 +417,16 @@ void Frontend::parseCodeSection() {
         confirm(!validationStack.empty(), "");
         bool const is64bit = (validationStack.top() == OperandStack::OperandType::I64);
         op.subROP(is64bit);
-        backend_.emit.append(ldr_base_off(REG::R9, ROP, 0U, is64bit));
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
         validationStack.pop();
 
-        backend_.emit.append(cmp_r_imm(REG::R9, 0U, is64bit));
+        as_.cmp_r_imm(REG::R9, 0U, is64bit);
         ///< Need relocation patching for branch offset.
-        uint32_t const positionOffsetOfConditionInstruction = backend_.emit.getCurrentOffset();
+        uint32_t const positionOffsetOfConditionInstruction = as_.getCurrentOffset();
         stack_.top().relpatchInsPos = positionOffsetOfConditionInstruction;
         ///< Prepare B.c
         ///< Will be link(set off) when trigger ELSE or END
-        backend_.emit.append(prepare_b_cond(CC::EQ));
+        as_.prepare_b_cond(CC::EQ);
         break;
       }
       case OPCode::ELSE: {
@@ -439,19 +439,19 @@ void Frontend::parseCodeSection() {
         ///< Prepare B
         // True branch of IF should jump to the END of ELSE branch code
         // This jump should emitted before ELSE branch code
-        uint32_t const positionOffsetOfJumpInsStart = backend_.emit.getCurrentOffset();
-        backend_.emit.append(prepare_b());
+        uint32_t const positionOffsetOfJumpInsStart = as_.getCurrentOffset();
+        as_.prepare_b();
         stack_.top().relpatchInsPos = positionOffsetOfJumpInsStart;
 
         ///< Link B.c to ELSE
         uint32_t const branchInsPosOff = preIfElement.relpatchInsPos;
-        uint32_t const elseCodeStartOffset = backend_.emit.getCurrentOffset();
+        uint32_t const elseCodeStartOffset = as_.getCurrentOffset();
         // This offset pos pointed is behind the end of IF block(cond == false)
         confirm(elseCodeStartOffset > branchInsPosOff, "for IF->ELSE case, always high address at end");
         confirm((elseCodeStartOffset - branchInsPosOff) % 4 == 0, "must 4 times, arm ins always 4 bytes");
         ///< B.cond. Its offset from the address of this instruction, in the range +/-1MB, is encoded as "imm19" times 4.
         int32_t const condOffset = static_cast<int32_t>((elseCodeStartOffset - branchInsPosOff) / 4);
-        backend_.emit.set_b_cond_off(branchInsPosOff, condOffset);
+        as_.set_b_cond_off(branchInsPosOff, condOffset);
         break;
       }
       case OPCode::UNREACHABLE:
@@ -560,7 +560,7 @@ void Frontend::parseCodeSection() {
     module_.functionInfos_.push_back(std::move(funcBody));
 
     if (stackUsage != 0U) {
-      backend_.emit.append(inc_sp(stackUsage));
+      as_.inc_sp(stackUsage);
     }
 
     if (funcTypeInfo.results.size() == 1U) {
@@ -573,11 +573,10 @@ void Frontend::parseCodeSection() {
       bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
       // prepare return value
       op.subROP(is64bit);
-      backend_.emit.append(ldr_base_off(REG::R0, REG::R28, 0U, is64bit));
+      as_.ldr_base_off(REG::R0, REG::R28, 0U, is64bit);
     }
     // assert(validationStack.empty() && "validation stack should be empty after parsing function body");
-    OPCodeTemplate const insRET = 0xd65f03c0; // big endian
-    backend_.emit.append(insRET);
+    as_.ret();
   }
 
   confirm(funcNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");

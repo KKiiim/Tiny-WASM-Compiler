@@ -63,47 +63,4 @@ inline bool isGPR(REG const reg) {
 ///
 enum class CC : uint8_t { EQ, NE, CS, HS = CS, CC, LO = CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV, NONE = 0xFF };
 
-///
-/// @brief Basic template for AArch64 OPCodes
-///
-using OPCodeTemplate = uint32_t;
-
-/// @brief 9 bits signed immediate for LDR/STR instructions, max value is 255
-uint8_t constexpr const MaxPositiveImmForLdrStr = 0xFFU;
-/// @brief LDR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
-OPCodeTemplate ldr_base_off(REG const destReg, REG const addrReg, uint32_t const offset, bool const is64bit);
-/// @brief STR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
-OPCodeTemplate str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit);
-/// @brief ADD R[d], R[s], imm
-OPCodeTemplate add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit);
-/// @brief ADD R[d], R[n], R[m]
-OPCodeTemplate add_r_r_extendedR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
-/// @brief ADD R[d], R[n], R[m]
-OPCodeTemplate add_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
-/// @brief ADD R[d], R[n], R[m]. adds two register values and the Carry flag value, and writes the result to the destination register.
-OPCodeTemplate adc_r_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
-/// @brief SUB R[d], R[s], imm
-OPCodeTemplate sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const imm, bool const is64bit);
-/// @brief SUB R[d], R[s], R[imm]
-OPCodeTemplate sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg);
-OPCodeTemplate sub_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
-/// @brief Increment SP by imm
-OPCodeTemplate inc_sp(uint32_t const imm);
-/// @brief Decrement SP by imm
-OPCodeTemplate dec_sp(uint32_t const imm);
-/// @brief MOV R[d], R[s]
-OPCodeTemplate mov_r_r(REG const destReg, REG const srcReg);
-/// @brief MOV R[d], imm. Can shift and not keep, but not supported yet
-OPCodeTemplate mov_r_imm16(REG const destReg, uint16_t const imm, bool const is64bit);
-///@brief MOVK R[d], imm, shift. K means keeping other bits unchanged
-OPCodeTemplate movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const shift, bool const is64bit);
-
-OPCodeTemplate mul_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
-
-OPCodeTemplate cmp_r_r(REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
-OPCodeTemplate cmp_r_imm(REG const firstSrcReg, uint32_t const imm, bool const is64bit);
-
-OPCodeTemplate prepare_b_cond(CC const condition);
-OPCodeTemplate prepare_b();
-
 #endif // AARCH64_ENCODING_HPP
