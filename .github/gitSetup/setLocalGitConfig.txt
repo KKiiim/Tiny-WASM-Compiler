@@ -1,5 +1,0 @@
-git config --local user.name "KKiiim"
-git config --local user.email "jerryfoooster@gmail.com"
-
-// for deubg with armQemu
-sudo apt install gdb-multiarch
