@@ -19,6 +19,7 @@ void BytecodeReader::readWasmBinary(std::string const &wasmPath) {
   if (!file.read(reinterpret_cast<char *>(bytecode_.data()), size)) {
     throw std::runtime_error(wasmPath + " read failed");
   }
+
   file.close();
 }
 
