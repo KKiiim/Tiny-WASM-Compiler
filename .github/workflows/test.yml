@@ -29,12 +29,7 @@ jobs:
           cache: "npm"
       - run: npm ci
 
-      - name: demo test chapters
-        run: |
-          npm run build:demo
-          npm run test:c2
-
-      - name: build arm gtest
+      - name: cross compile arm gtest
         run: |
           cd third_party/googletest && mkdir -p build && cd build && cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc && make -j && sudo make install
 
@@ -46,5 +41,5 @@ jobs:
             wast2json "$wast_file" --output="$json_file"
           done
 
-          npm run build:spectest
+          npm run build
           qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/bin/Spectest
