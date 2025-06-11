@@ -1,6 +1,6 @@
 #include "compiler.hpp"
 
-#include "src/backend/emit.hpp"
+#include "src/backend/aarch64Assembler.hpp"
 #include "src/common/ExecutableMemory.hpp"
 #include "src/frontend/frontend.hpp"
 
@@ -10,11 +10,10 @@ ExecutableMemory &Compiler::compile(std::string const &wasmPath) {
 }
 
 void Compiler::initRuntime() {
-  Emit emit{}; // temporary emitter
-  emit.emit_mov_x_imm64(REG::R28, operandStack_.getStartAddr());
-  OPCodeTemplate const insRET = 0xd65f03c0; // big endian
-  emit.append(insRET);
-  ExecutableMemory const exec = emit.getExecutableMemory();
+  Assembler as{}; // temporary emitter
+  as.emit_mov_x_imm64(REG::R28, operandStack_.getStartAddr());
+  as.ret();
+  ExecutableMemory const exec = as.getExecutableMemory();
   void (*const init)() = exec.data<void (*)()>();
   // FIXME: Maybe dangerous, since we don't know what happened between init and first function call
   // May influence the R28 ?

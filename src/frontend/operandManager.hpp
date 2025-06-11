@@ -3,12 +3,12 @@
 
 #include <cstdint>
 
-#include "src/backend/arm64Backend.hpp"
+#include "src/backend/aarch64Assembler.hpp"
 #include "src/common/wasm_type.hpp"
 
 class OP {
 public:
-  explicit OP(Arm64Backend &backend) : size_(0U), backend_(backend) {
+  explicit OP(Assembler &as) : size_(0U), as_(as) {
   }
   /// @brief store i32 and i64
   /// @return record offset in from SP
@@ -28,15 +28,15 @@ public:
   void set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const isTee);
   /// @brief drop a value from the operand stack
   inline void subROP(bool const is64bit) {
-    backend_.emit.append(sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+    as_.sub_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true);
   }
   inline void addROP(bool const is64bit) {
-    backend_.emit.append(add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true));
+    as_.add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true);
   }
 
 private:
   uint32_t size_;
-  Arm64Backend &backend_;
+  Assembler &as_;
 };
 
 #endif

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "src/backend/arm64Backend.hpp"
+#include "src/backend/aarch64Assembler.hpp"
 #include "src/common/ModuleInfo.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/operand_stack.hpp"
@@ -39,7 +39,7 @@ private:
   BytecodeReader br_;
 
 private:
-  Arm64Backend backend_;
+  Assembler as_;
 
   Stack &stack_;
   OperandStack &operandStack_;
