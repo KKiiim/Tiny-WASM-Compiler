@@ -70,6 +70,11 @@ public:
   void cmp_r_r(REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
   void cmp_r_imm(REG const firstSrcReg, uint32_t const imm, bool const is64bit);
 
+  void brk();
+
+  void sdiv_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
+  void udiv_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
+
   /////////////////////////////////////////////////////////////////
   //< Customized instructions
   /////////////////////////////////////////////////////////////////
@@ -83,6 +88,8 @@ public:
 
   void set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const condOffset);
   void set_b_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const offset);
+
+  void setTrap(uint32_t const trapcode);
 
 private:
   void append(OPCodeTemplate const ins);

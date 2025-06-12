@@ -15,6 +15,7 @@ enum class Type : uint8_t {
   // command type
   module,
   assert_return,
+  assert_trap,
 
   // action type
   invoke,
@@ -57,6 +58,7 @@ public:
   uint32_t line{0U};
   Action action;
   Expected expected;
+  std::string text; ///< If is assert_trap type, this is the trap message
 
   std::string getSignature() const;
   void setParams(std::array<uint64_t, MaxParamsForWasmFunction> &params) const;

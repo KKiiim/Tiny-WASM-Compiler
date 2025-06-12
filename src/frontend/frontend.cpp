@@ -9,6 +9,7 @@
 #include "operandManager.hpp"
 
 #include "src/backend/aarch64_encoding.hpp"
+#include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/operand_stack.hpp"
 #include "src/common/stack.hpp"
@@ -454,6 +455,49 @@ void Frontend::parseCodeSection() {
         as_.set_b_cond_off(branchInsPosOff, condOffset);
         break;
       }
+      case OPCode::I32_DIV_S:
+      case OPCode::I32_DIV_U:
+      case OPCode::I64_DIV_S:
+      case OPCode::I64_DIV_U: {
+        confirm(validationStack.size() >= 2U, "");
+        bool const is64bit = (opcode == OPCode::I64_DIV_S || opcode == OPCode::I64_DIV_U);
+        // get divisor in R9
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0, is64bit);
+        as_.cmp_r_imm(REG::R9, 0U, is64bit);
+        uint32_t const branchPos = as_.getCurrentOffset();
+        as_.prepare_b_cond(CC::NE);
+        as_.setTrap(Trapcode::DIV_0);
+        int32_t const condOffset = static_cast<int32_t>((as_.getCurrentOffset() - branchPos) / 4);
+        as_.set_b_cond_off(branchPos, condOffset);
+
+        ///< Divisor is not zero, continue to do division
+        ///< If divisor is -1 and dividend is INT_MIN, it will trap with integer overflow
+        // get dividend in R10
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+
+        // as_.cmp_r_imm(REG::R10, is64bit?0x8000000000000000:0x80000000, is64bit);
+        // cmp w0, #0x80000000
+        // b.ne safe_division
+        // cmp w1, #-1
+        // b.ne safe_division
+        // brk #0x1
+        // safe_division:
+        // sdiv w2, w0, w1
+
+        // no trap div
+        if (opcode == OPCode::I32_DIV_S || opcode == OPCode::I64_DIV_S) {
+          as_.sdiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
+        } else {
+          as_.udiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
+        }
+        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+        op.addROP(is64bit);
+        validationStack.pop(); // need to pop once
+
+        break;
+      }
       case OPCode::UNREACHABLE:
       case OPCode::BLOCK:
       case OPCode::LOOP:
@@ -524,8 +568,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_CLZ:
       case OPCode::I32_CTZ:
       case OPCode::I32_POPCNT:
-      case OPCode::I32_DIV_S:
-      case OPCode::I32_DIV_U:
       case OPCode::I32_REM_S:
       case OPCode::I32_REM_U:
       case OPCode::I32_AND:
@@ -539,8 +581,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_CLZ:
       case OPCode::I64_CTZ:
       case OPCode::I64_POPCNT:
-      case OPCode::I64_DIV_S:
-      case OPCode::I64_DIV_U:
       case OPCode::I64_REM_S:
       case OPCode::I64_REM_U:
       case OPCode::I64_AND:

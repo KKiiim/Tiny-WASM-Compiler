@@ -13,8 +13,6 @@ public:
   explicit Compiler() : frontend_(module_, stack_, operandStack_){};
 
   ExecutableMemory &compile(std::string const &wasmPath);
-  /// @brief Initialize the runtime environment, e.g., set up the operand stack start address
-  void initRuntime();
 
   template <typename T, typename... Args> T singleCallByName(std::string const &funcName, std::string const &signature, Args &&...args) {
     auto const &funcIdex = module_.exportFuncNameToIndex_.find(funcName);
@@ -31,9 +29,12 @@ public:
 
     using FuncPtr = T (*)(typename std::remove_reference_t<Args>...);
     auto *func = bit_cast<FuncPtr>(funcStartAddress);
-    initRuntime();
+    initOperandStack();
     return func(std::forward<Args>(args)...);
   }
+
+private:
+  void initOperandStack();
 
 private:
   Stack stack_;               ///< Compiler stack
