@@ -37,9 +37,23 @@ TEST(Chapter03, arithmetic) {
   }
 }
 
-TEST(Chapter05, if_) {
+TEST(Chapter04, if_) {
   JsonReader const jsonReader("tests/testcases/tmp/if.json");
   LOG_YELLOW << ConsoleYellow << "Testing if.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    Compiler compiler;
+    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
+
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
+    for (const auto &testCase : module.testCases) {
+      execTest(testCase, compiler);
+    }
+  }
+}
+
+TEST(Chapter05, div) {
+  JsonReader const jsonReader("tests/testcases/tmp/div.json");
+  LOG_YELLOW << ConsoleYellow << "Testing div.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
     Compiler compiler;
     compiler.compile("tests/testcases/tmp/" + module.moduleFileName);

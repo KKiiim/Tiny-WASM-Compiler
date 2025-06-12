@@ -8,9 +8,9 @@ ExecutableMemory &Compiler::compile(std::string const &wasmPath) {
   executableMemory_ = frontend_.startCompilation(wasmPath);
   return executableMemory_;
 }
-
-void Compiler::initRuntime() {
+void Compiler::initOperandStack() {
   Assembler as{}; // temporary emitter
+  ///< Init operand stack
   as.emit_mov_x_imm64(REG::R28, operandStack_.getStartAddr());
   as.ret();
   ExecutableMemory const exec = as.getExecutableMemory();

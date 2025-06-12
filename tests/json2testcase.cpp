@@ -12,9 +12,13 @@ namespace spec {
 Param::Param(nlohmann::json const &paramJson) {
   // only support i32 and i64 for now
   type = paramJson["type"].get<std::string>() == "i32" ? Type::i32 : Type::i64;
-  uint64_t v;
-  std::istringstream ss(paramJson["value"].get<std::string>());
-  ss >> v;
+  uint64_t v{};
+
+  ///< May not contain value becase of the assert_trap command
+  if (paramJson.contains("value")) {
+    std::istringstream ss(paramJson["value"].get<std::string>());
+    ss >> v;
+  }
   if (type == Type::i32) {
     value32 = static_cast<uint32_t>(v);
   } else if (type == Type::i64) {
@@ -37,9 +41,8 @@ JsonReader::JsonReader(const std::string &jsonPath) {
       TestModule module;
       module.moduleFileName = command["filename"].get<std::string>();
       modules_.push_back(std::move(module));
-    } else if (commandType == "assert_return") {
+    } else if ((commandType == "assert_return") || (commandType == "assert_trap")) {
       TestCase testcase;
-      testcase.commandType = Type::assert_return;
       testcase.line = command["line"].get<uint32_t>();
 
       ///< parse action
@@ -62,10 +65,20 @@ JsonReader::JsonReader(const std::string &jsonPath) {
       }
       confirm(((expectedParam.ret.size() == 0U) || (expectedParam.ret.size() == 1U)), "Expected only one return value for now");
 
+      if (commandType == "assert_return") {
+        testcase.commandType = Type::assert_return;
+      } else { // assert_trap
+        testcase.commandType = Type::assert_trap;
+        confirm(command.contains("text"), "assert_trap should has text");
+        confirm(command["text"].is_string(), "Expected text to be string");
+        testcase.text = command["text"].get<std::string>();
+      }
+
       ///< set parsed sections to testcase
       testcase.action = std::move(action);
       testcase.expected = std::move(expectedParam);
       modules_[modules_.size() - 1].testCases.push_back(std::move(testcase));
+    } else if (commandType == "assert_trap") {
     } else {
       LOG_ERROR << "Unknown command type: " << commandType << LOG_END;
       continue; // Skip unknown command types

@@ -3,6 +3,7 @@
 #include "aarch64Assembler.hpp"
 #include "aarch64_encoding.hpp"
 
+#include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
 
 /////////////////////////////////////////////////////////////////
@@ -228,6 +229,32 @@ void Assembler::prepare_b() {
   OPCodeTemplate const opcode = 0x14000000;
   append(opcode);
 }
+void Assembler::brk() {
+  // 1101 0100 001 imm16 00000
+  // d4200000
+  OPCodeTemplate opcode = 0xd4200000;
+  // Use regiter to store trap code before brk, so brk's imm is unused
+  append(opcode);
+}
+
+void Assembler::sdiv_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  // sf 001 1010 110 Rm 000011 Rn Rd
+  // 1ac00c00
+  OPCodeTemplate opcode = is64bit ? 0x9ac00c00 : 0x1ac00c00;
+  opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
+  append(opcode);
+}
+void Assembler::udiv_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
+  // sf 001 1010 110 Rm 000010 Rn Rd
+  // 1ac00800
+  OPCodeTemplate opcode = is64bit ? 0x9ac00800 : 0x1ac00800;
+  opcode |= (static_cast<OPCodeTemplate>(secondSrcReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(firstSrcReg) << 5U);   // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);               // dest 0-4
+  append(opcode);
+}
 
 /////////////////////////////////////////////////////////////////
 //< Customized instructions
@@ -292,4 +319,9 @@ void Assembler::set_b_off(uint32_t const b_instructionPositionOffsetToOutputBina
   opcode |= static_cast<OPCodeTemplate>(offset) & 0x3FFFFFFU;
 
   memcpy(&data_[b_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
+}
+
+void Assembler::setTrap(uint32_t const trapcode) {
+  mov_r_imm16(REG::R0, trapcode, false);
+  brk();
 }

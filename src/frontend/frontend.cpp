@@ -9,6 +9,7 @@
 #include "operandManager.hpp"
 
 #include "src/backend/aarch64_encoding.hpp"
+#include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/operand_stack.hpp"
 #include "src/common/stack.hpp"
@@ -458,49 +459,31 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_DIV_U:
       case OPCode::I64_DIV_S:
       case OPCode::I64_DIV_U: {
-        // Design:
-        // Active Protect if div 0. Reuse the try-catch wrapper in C++ to store-load the callee-saved regs.
-        //
-        // In JIT:
-        // mov x0, trapcode
-        // brk #1234
-        //
-        // In signal_handler, check si_code==1234 to confirm it is jit's trap
-        // Read trapcode from x0, throw and catched by the C++ try-catch wrapper
-        //
-        ///< Can extended to support like: use another reg for trapped wat line
-        //
-        // class JitTrapException : public std::exception {
-        //   uint64_t trapcode;
-        // public:
-        //   JitTrapException(uint64_t code) : trapcode(code) {
-        //   }
-        //   const char *what() const noexcept override {
-        //     return "JIT trap with custom code";
-        //   }
-        //   uint64_t code() const {
-        //     return trapcode;
-        //   }
-        // };
-        // void signal_handler(int sig, siginfo_t *info, void *ucontext) {
-        //   ucontext_t *ctx = (ucontext_t *)ucontext;
-        //   uint64_t trapcode = ctx->uc_mcontext.regs[0];
-        //   throw JitTrapException(trapcode);
-        // }
-        // void register_handlers() {
-        //   struct sigaction sa;
-        //   sa.sa_sigaction = signal_handler;
-        //   sa.sa_flags = SA_SIGINFO;
-        //   sigaction(SIGTRAP, &sa, nullptr);
-        // }
-        // int main() {
-        //   register_handlers();
-        //   try {
-        //     jit_trap_code();
-        //   } catch (const JitTrapException &e) {
-        //     std::cerr << "Caught JIT trap. Code: 0x" << std::hex << e.code() << std::endl;
-        //   }
-        // }
+        confirm(validationStack.size() >= 2U, "");
+        bool const is64bit = (opcode == OPCode::I64_DIV_S || opcode == OPCode::I64_DIV_U);
+        // get divisor in R9
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0, is64bit);
+        as_.cmp_r_imm(REG::R9, 0U, is64bit);
+        uint32_t const branchPos = as_.getCurrentOffset();
+        as_.prepare_b_cond(CC::NE);
+        as_.setTrap(Trapcode::DIV_0);
+        int32_t const condOffset = static_cast<int32_t>((as_.getCurrentOffset() - branchPos) / 4);
+        as_.set_b_cond_off(branchPos, condOffset);
+
+        // no trap div
+        // get dividend in R10
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        if (opcode == OPCode::I32_DIV_S || opcode == OPCode::I64_DIV_S) {
+          as_.sdiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
+        } else {
+          as_.udiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
+        }
+        as_.ldr_base_off(ROP, REG::R9, 0U, is64bit);
+        op.addROP(is64bit);
+        validationStack.pop(); // need to pop once
+
         break;
       }
       case OPCode::UNREACHABLE:
