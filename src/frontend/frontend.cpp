@@ -471,10 +471,23 @@ void Frontend::parseCodeSection() {
         int32_t const condOffset = static_cast<int32_t>((as_.getCurrentOffset() - branchPos) / 4);
         as_.set_b_cond_off(branchPos, condOffset);
 
-        // no trap div
+        ///< Divisor is not zero, continue to do division
+        ///< If divisor is -1 and dividend is INT_MIN, it will trap with integer overflow
         // get dividend in R10
         op.subROP(is64bit);
         as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+
+        // as_.cmp_r_imm(REG::R10, is64bit?0x8000000000000000:0x80000000, is64bit);
+        // cmp w0, #0x80000000
+        // b.ne safe_division
+        // cmp w1, #-1
+        // b.ne safe_division
+        // // 如果是 INT32_MIN
+        // brk #0x1
+        // safe_division:
+        // sdiv w2, w0, w1
+
+        // no trap div
         if (opcode == OPCode::I32_DIV_S || opcode == OPCode::I64_DIV_S) {
           as_.sdiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
         } else {
