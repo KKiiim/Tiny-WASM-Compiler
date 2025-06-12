@@ -482,7 +482,6 @@ void Frontend::parseCodeSection() {
         // b.ne safe_division
         // cmp w1, #-1
         // b.ne safe_division
-        // // 如果是 INT32_MIN
         // brk #0x1
         // safe_division:
         // sdiv w2, w0, w1

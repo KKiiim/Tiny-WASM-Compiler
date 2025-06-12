@@ -12,7 +12,7 @@
     "check:clang-format": "find src -regex \".*\\.\\(cpp\\|hpp\\|c\\|h\\)\" | xargs clang-format -style=file --Werror --dry-run",
     "check:all": "npm run check:prettier && npm run check:cspell && npm run check:clang-format",
     "fix:prettier": "prettier -c --write .",
-    "build": "mkdir -p build && cd build && cmake -DENABLE_DEMO=1 -DENABLE_TEST=1 -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 .. && make -j && cd ..",
+    "build": "mkdir -p build && cd build && cmake -DENABLE_DEMO=1 -DENABLE_TEST=1 -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ .. && make -j && cd ..",
     "spectest": "qemu-aarch64 -L /usr/aarch64-linux-gnu ./build/bin/Spectest",
     "launch:qemu:debug": "qemu-aarch64 -g 12356 -L /usr/aarch64-linux-gnu ./build/bin/demo",
     "launch:spectest:debug": "qemu-aarch64 -g 133456 -L /usr/aarch64-linux-gnu ./build/bin/Spectest",
