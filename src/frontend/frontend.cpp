@@ -480,7 +480,7 @@ void Frontend::parseCodeSection() {
         } else {
           as_.udiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
         }
-        as_.ldr_base_off(ROP, REG::R9, 0U, is64bit);
+        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         validationStack.pop(); // need to pop once
 

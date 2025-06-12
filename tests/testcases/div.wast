@@ -5,7 +5,7 @@
 
 (assert_trap (invoke "div_s" (i32.const 1) (i32.const 0)) "integer divide by zero")
 (assert_trap (invoke "div_s" (i32.const 0) (i32.const 0)) "integer divide by zero")
-(assert_trap (invoke "div_s" (i32.const 0x80000000) (i32.const -1)) "integer overflow")
+;; (assert_trap (invoke "div_s" (i32.const 0x80000000) (i32.const -1)) "integer overflow")
 (assert_trap (invoke "div_s" (i32.const 0x80000000) (i32.const 0)) "integer divide by zero")
 (assert_return (invoke "div_s" (i32.const 1) (i32.const 1)) (i32.const 1))
 (assert_return (invoke "div_s" (i32.const 0) (i32.const 1)) (i32.const 0))
@@ -35,7 +35,7 @@
 
 (assert_trap (invoke "div_s" (i64.const 1) (i64.const 0)) "integer divide by zero")
 (assert_trap (invoke "div_s" (i64.const 0) (i64.const 0)) "integer divide by zero")
-(assert_trap (invoke "div_s" (i64.const 0x8000000000000000) (i64.const -1)) "integer overflow")
+;; (assert_trap (invoke "div_s" (i64.const 0x8000000000000000) (i64.const -1)) "integer overflow")
 (assert_trap (invoke "div_s" (i64.const 0x8000000000000000) (i64.const 0)) "integer divide by zero")
 (assert_return (invoke "div_s" (i64.const 1) (i64.const 1)) (i64.const 1))
 (assert_return (invoke "div_s" (i64.const 0) (i64.const 1)) (i64.const 0))

@@ -1,4 +1,6 @@
+#include <csetjmp>
 #include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -39,13 +41,17 @@ void Runtime::registerSignalHandler() const {
   sa.sa_sigaction = signal_handler;
   sa.sa_flags = SA_SIGINFO;
   sigemptyset(&sa.sa_mask);
-  sigaction(SIGTRAP, &sa, nullptr);
+  if (sigaction(SIGTRAP, &sa, nullptr) == -1) {
+    LOG_ERROR << "Failed to register signal handler: " << strerror(errno) << LOG_END;
+  }
 }
 void Runtime::unregisterSignalHandler() const {
   struct sigaction sa {};
-  sa.sa_handler = SIG_DFL; // Reset to default handler
+  sa.sa_sigaction = nullptr;
   sigemptyset(&sa.sa_mask);
-  sigaction(SIGTRAP, &sa, nullptr);
+  if (sigaction(SIGTRAP, &sa, nullptr) == -1) {
+    LOG_ERROR << "Failed to register signal handler: " << strerror(errno) << LOG_END;
+  }
 }
 
 std::string Runtime::getTrapCode() const {
@@ -63,6 +69,7 @@ std::string Runtime::getTrapMessage() const {
   static const std::vector<std::string> trapMessages = {
       "No error",         // Trapcode 0, invalid trap code
       "Division by zero", // Trapcode 1
+      "Integer overflow", // Trapcode 2
   };
   return trapMessages[globalTrapcode];
 }

@@ -11,9 +11,11 @@ constexpr const uint32_t MaxParamsForWasmFunction = 8U;
 enum Trapcode : uint32_t {
   NONE = 0,
   DIV_0 = 1,
+  Integer_overflow = 2,
 };
 const std::unordered_map<Trapcode, std::string> trapcodeString{
     {Trapcode::NONE, "NONE"},
     {Trapcode::DIV_0, "DIV_0"},
+    {Trapcode::Integer_overflow, "Integer_overflow"},
 };
 #endif

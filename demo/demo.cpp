@@ -27,7 +27,19 @@ int main(int argc, char *argv[]) {
   {
     Runtime runtime{compiler};
 
-    Runtime::CallReturn const ret = runtime.callByName<uint32_t>("div_s", "i(ii)", 0, 0);
+    Runtime::CallReturn const ret = runtime.callByName<uint32_t>("div_s", "i(ii)", 4, 2);
+    if (ret.hasTrapped) {
+      LOG_YELLOW << "TrapException caught with code: " << runtime.getTrapCode() << LOG_END;
+      LOG_YELLOW << "Exception: " << runtime.getTrapMessage() << LOG_END;
+    } else {
+      uint32_t const ret32 = static_cast<uint32_t>(ret.returnValue);
+      LOG_GREEN << "div_s, i(ii) = " << ret32 << LOG_END;
+    }
+  }
+  {
+    Runtime runtime{compiler};
+
+    Runtime::CallReturn const ret = runtime.callByName<uint32_t>("div_s", "i(ii)", 1, 1);
     if (ret.hasTrapped) {
       LOG_YELLOW << "TrapException caught with code: " << runtime.getTrapCode() << LOG_END;
       LOG_YELLOW << "Exception: " << runtime.getTrapMessage() << LOG_END;
