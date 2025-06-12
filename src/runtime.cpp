@@ -12,6 +12,13 @@
 sigjmp_buf globalTrapEnv{};
 static volatile uint32_t globalTrapcode{};
 
+Runtime::Runtime(Compiler &compiler) : compiler_(compiler) {
+  registerSignalHandler();
+}
+Runtime::~Runtime() {
+  unregisterSignalHandler();
+}
+
 extern "C" void signal_handler(int sig, siginfo_t *info, void *ucontext) {
   if (sig != SIGTRAP || info->si_code != TRAP_BRKPT) {
     LOG_ERROR << "Unexpected signal: " << sig << " with code: " << info->si_code << LOG_END;
@@ -31,6 +38,12 @@ void Runtime::registerSignalHandler() const {
   struct sigaction sa {};
   sa.sa_sigaction = signal_handler;
   sa.sa_flags = SA_SIGINFO;
+  sigemptyset(&sa.sa_mask);
+  sigaction(SIGTRAP, &sa, nullptr);
+}
+void Runtime::unregisterSignalHandler() const {
+  struct sigaction sa {};
+  sa.sa_handler = SIG_DFL; // Reset to default handler
   sigemptyset(&sa.sa_mask);
   sigaction(SIGTRAP, &sa, nullptr);
 }

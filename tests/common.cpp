@@ -19,7 +19,6 @@ void execTest(TestCase const &testCase, Compiler &compiler) {
   auto const &signature = testCase.getSignature();
 
   Runtime runtime{compiler};
-  runtime.registerSignalHandler();
 
   // TODO(): compare the trap message and the assert_trap text
 

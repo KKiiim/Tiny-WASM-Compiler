@@ -7,16 +7,15 @@
 #include <string>
 #include <type_traits>
 
+#include "src/common/logger.hpp"
 #include "src/compiler.hpp"
 
 extern sigjmp_buf globalTrapEnv;
 
 class Runtime {
 public:
-  explicit Runtime(Compiler &compiler) : compiler_(compiler) {
-  }
-
-  void registerSignalHandler() const;
+  explicit Runtime(Compiler &compiler);
+  ~Runtime();
 
   std::string getTrapCode() const;
   std::string getTrapMessage() const;
@@ -29,7 +28,9 @@ public:
   template <typename T, typename... Args> CallReturn callByName(std::string const &funcName, std::string const &signature, Args &&...args) {
     CallReturn ret{};
 
+    ret.hasTrapped = false;
     int status = sigsetjmp(globalTrapEnv, 0);
+    LOG_ERROR << "status=" << status << LOG_END;
     if (status == 0) {
       ///< Normal call
 
@@ -45,8 +46,13 @@ public:
     }
 
     ret.hasTrapped = (status != 0);
+    LOG_ERROR << "callbyname return" << LOG_END;
     return ret;
   }
+
+private:
+  void registerSignalHandler() const;
+  void unregisterSignalHandler() const;
 
 private:
   Compiler &compiler_;
