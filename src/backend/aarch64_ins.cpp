@@ -2,6 +2,7 @@
 
 #include "aarch64Assembler.hpp"
 #include "aarch64_encoding.hpp"
+#include "relpatch.hpp"
 
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
@@ -324,4 +325,17 @@ void Assembler::set_b_off(uint32_t const b_instructionPositionOffsetToOutputBina
 void Assembler::setTrap(uint32_t const trapcode) {
   mov_r_imm16(REG::R0, trapcode, false);
   brk();
+}
+
+Relpatch Assembler::prepareJmp(CC const condition) {
+  if (condition == CC::NONE) {
+    // unconditional jump
+    Relpatch patch{*this, false};
+    prepare_b();
+    return patch;
+  } else {
+    Relpatch patch{*this, true};
+    prepare_b_cond(condition);
+    return patch;
+  }
 }
