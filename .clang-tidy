@@ -97,7 +97,7 @@ cert-dcl58-cpp,
 cert-err09-cpp,
 cert-err34-c,
 cert-err52-cpp,
-# cert-err58-cpp,
+# cert-err58-cpp, # To ignore warnings when building gtest and system files
 cert-err60-cpp,
 cert-fio38-c,
 cert-flp30-c,

@@ -12,7 +12,7 @@
 /////////////////////////////////////////////////////////////////
 
 void Assembler::ret() {
-  OPCodeTemplate const insRET = 0xd65f03c0; // big endian
+  constexpr const OPCodeTemplate insRET = 0xd65f03c0; // big endian
   append(insRET);
 }
 void Assembler::str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit) {
@@ -227,13 +227,13 @@ void Assembler::prepare_b_cond(CC const condition) {
 void Assembler::prepare_b() {
   // 0001 01 imm26
   // 14000000
-  OPCodeTemplate const opcode = 0x14000000;
+  constexpr const OPCodeTemplate opcode = 0x14000000;
   append(opcode);
 }
 void Assembler::brk() {
   // 1101 0100 001 imm16 00000
   // d4200000
-  OPCodeTemplate opcode = 0xd4200000;
+  constexpr const OPCodeTemplate opcode = 0xd4200000;
   // Use regiter to store trap code before brk, so brk's imm is unused
   append(opcode);
 }
