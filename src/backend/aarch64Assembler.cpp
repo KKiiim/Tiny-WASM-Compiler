@@ -5,7 +5,6 @@
 #include <sys/mman.h>
 
 #include "aarch64Assembler.hpp"
-#include "aarch64_encoding.hpp"
 
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"

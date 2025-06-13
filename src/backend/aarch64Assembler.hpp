@@ -17,6 +17,7 @@ using OPCodeTemplate = uint32_t;
 /// @brief 9 bits signed immediate for LDR/STR instructions, max value is 255
 uint8_t constexpr const MaxPositiveImmForLdrStr = 0xFFU;
 
+class Relpatch;
 class Assembler {
 public:
   Assembler();
@@ -83,13 +84,14 @@ public:
   void emit_mov_w_imm32(REG const destReg, uint32_t const imm);
   void decreaseSPWithClean(uint32_t const bytes);
 
+  void setTrap(uint32_t const trapcode);
+
   void prepare_b_cond(CC const condition);
   void prepare_b();
-
   void set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const condOffset);
   void set_b_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const offset);
 
-  void setTrap(uint32_t const trapcode);
+  Relpatch prepareJmp(CC const condition);
 
 private:
   void append(OPCodeTemplate const ins);

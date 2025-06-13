@@ -20,7 +20,7 @@ public:
 
   WasmType returnType_ = WasmType::INVALID;
   ///< Point the start of the branch instruction as offset relative to the output binary.
-  // Used for relocation patching
+  // Used for relocation patching in cross control flow circumstance
   uint32_t relpatchInsPos = 0;
 };
 

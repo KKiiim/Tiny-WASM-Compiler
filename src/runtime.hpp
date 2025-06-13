@@ -31,7 +31,7 @@ public:
     ret.hasTrapped = false;
     // set nonzero savemask for saving the signal mask(set in Runtime)
     int status = sigsetjmp(globalTrapEnv, 1);
-    LOG_YELLOW << "status=" << status << LOG_END;
+    LOG_DEBUG << "status=" << status << LOG_END;
     if (status == 0) {
       ///< Normal call
 
@@ -47,7 +47,7 @@ public:
     }
 
     ret.hasTrapped = (status != 0);
-    LOG_INFO << "callbyname return" << LOG_END;
+    LOG_DEBUG << "callbyname return" << LOG_END;
     return ret;
   }
 
