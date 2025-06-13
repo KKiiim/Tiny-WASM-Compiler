@@ -11,7 +11,7 @@ WasmType toWasmType(OperandType const tOperand) {
   case OperandType::I64:
     return WasmType::I64;
   default:
-    return WasmType::I32;
+    confirm(false, "Invalid OperandType passed to toWasmType");
   }
 }
 
