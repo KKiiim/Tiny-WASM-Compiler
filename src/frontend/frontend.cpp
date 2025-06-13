@@ -475,6 +475,29 @@ void Frontend::parseCodeSection() {
         op.subROP(is64bit);
         as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
 
+        // Is INT_MIN
+        if (is64bit) {
+          as_.emit_mov_x_imm64(REG::R11, 0x8000000000000000);
+          as_.cmp_r_r(REG::R10, REG::R11, true);
+        } else {
+          as_.emit_mov_w_imm32(REG::R11, 0x80000000);
+          as_.cmp_r_r(REG::R10, REG::R11, false);
+        }
+        Relpatch const notIntMin = as_.prepareJmp(CC::NE);
+
+        // Is -1
+        if (is64bit) {
+          as_.emit_mov_x_imm64(REG::R11, static_cast<uint64_t>(-1));
+          as_.cmp_r_r(REG::R9, REG::R11, true);
+        } else {
+          as_.emit_mov_w_imm32(REG::R11, static_cast<uint32_t>(-1));
+          as_.cmp_r_r(REG::R9, REG::R11, false);
+        }
+        Relpatch const notMinusOne = as_.prepareJmp(CC::NE);
+        as_.setTrap(Trapcode::Integer_overflow);
+
+        notIntMin.linkedHere();
+        notMinusOne.linkedHere();
         // safe division
         if (opcode == OPCode::I32_DIV_S || opcode == OPCode::I64_DIV_S) {
           as_.sdiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);

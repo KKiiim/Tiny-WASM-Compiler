@@ -16,6 +16,7 @@ static volatile uint32_t globalTrapcode{};
 
 Runtime::Runtime(Compiler &compiler) : compiler_(compiler) {
   registerSignalHandler();
+  globalTrapcode = 0U;
 }
 Runtime::~Runtime() {
   unregisterSignalHandler();
