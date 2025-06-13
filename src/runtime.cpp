@@ -27,8 +27,7 @@ extern "C" void signal_handler(int sig, siginfo_t *info, void *ucontext) {
     LOG_ERROR << "Unexpected signal: " << sig << " with code: " << info->si_code << LOG_END;
     return;
   }
-  uint64_t const brkAddress = static_cast<uint64_t>(bit_cast<uintptr_t>(info->si_addr));
-  LOG_DEBUG << "Signal handler triggered with brkAddress: " << brkAddress << LOG_END;
+  LOG_DEBUG << "Signal handler triggered with brkAddress: " << static_cast<uint64_t>(bit_cast<uintptr_t>(info->si_addr)) << LOG_END;
   ucontext_t const *const ctx = static_cast<ucontext_t *>(ucontext);
   // Default use R0 to store trap code
   globalTrapcode = ctx->uc_mcontext.regs[0];

@@ -233,7 +233,7 @@ void Assembler::prepare_b() {
 void Assembler::brk() {
   // 1101 0100 001 imm16 00000
   // d4200000
-  OPCodeTemplate opcode = 0xd4200000;
+  OPCodeTemplate const opcode = 0xd4200000;
   // Use regiter to store trap code before brk, so brk's imm is unused
   append(opcode);
 }
