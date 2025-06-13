@@ -6,6 +6,9 @@
 #include "src/backend/aarch64Assembler.hpp"
 #include "src/common/wasm_type.hpp"
 
+enum class OperandType : uint8_t { I32 = 0, I64 };
+WasmType toWasmType(OperandType const tOperand);
+
 class OP {
 public:
   explicit OP(Assembler &as) : size_(0U), as_(as) {

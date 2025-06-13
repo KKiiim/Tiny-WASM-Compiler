@@ -12,7 +12,6 @@
 #include "src/backend/relpatch.hpp"
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
-#include "src/common/operand_stack.hpp"
 #include "src/common/stack.hpp"
 #include "src/common/wasm_type.hpp"
 
@@ -202,7 +201,7 @@ void Frontend::parseCodeSection() {
     // TODO(): should split to different class
     OP op{as_};
     ///< checker of local operations
-    std::stack<OperandStack::OperandType> validationStack{};
+    std::stack<OperandType> validationStack{};
 
     while (localDeclIndex++ < localDeclCount) {
       uint32_t const currentTypeLocalCount = br_.readLEB128<uint32_t>();
@@ -232,7 +231,7 @@ void Frontend::parseCodeSection() {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
         bool const is64bit = l.type == WasmType::I64;
-        validationStack.push(is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32);
+        validationStack.push(is64bit ? OperandType::I64 : OperandType::I32);
         if (l.isParam) {
           // param in register. Assumed params <= 8
           confirm(localIdx < funcTypeInfo.params.size(), "");
@@ -250,7 +249,7 @@ void Frontend::parseCodeSection() {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
         auto const &l = funcBody.locals[localIdx];
         auto const topType = validationStack.top();
-        confirm(operandStack_.toWasmType(topType) == l.type, "must");
+        confirm(toWasmType(topType) == l.type, "must");
         // local.tee don't pop operand stack element
         if (opcode == OPCode::LOCAL_SET) {
           validationStack.pop();
@@ -259,16 +258,16 @@ void Frontend::parseCodeSection() {
         if (l.isParam) {
           confirm(localIdx < funcTypeInfo.params.size(), "");
           confirm(l.type == funcTypeInfo.params[localIdx], "");
-          op.set_r_param(localIdx, topType == OperandStack::OperandType::I64, opcode == OPCode::LOCAL_TEE);
+          op.set_r_param(localIdx, topType == OperandType::I64, opcode == OPCode::LOCAL_TEE);
         } else {
           uint32_t const offset2SP = l.offset;
-          op.set_ofsp_local(offset2SP, topType == OperandStack::OperandType::I64, opcode == OPCode::LOCAL_TEE);
+          op.set_ofsp_local(offset2SP, topType == OperandType::I64, opcode == OPCode::LOCAL_TEE);
         }
         break;
       }
       case OPCode::I32_CONST: {
         uint32_t const v = bit_cast<uint32_t>(br_.readLEB128<int32_t>());
-        validationStack.push(OperandStack::OperandType::I32);
+        validationStack.push(OperandType::I32);
         // Use W9 as scratch register
         as_.emit_mov_w_imm32(REG::R9, v);
         as_.str_base_off(ROP, REG::R9, 0U, false);
@@ -277,7 +276,7 @@ void Frontend::parseCodeSection() {
       }
       case OPCode::I64_CONST: {
         uint64_t const v = bit_cast<uint64_t>(br_.readLEB128<int64_t>());
-        validationStack.push(OperandStack::OperandType::I64);
+        validationStack.push(OperandType::I64);
         // Use W9 as scratch register
         as_.emit_mov_x_imm64(REG::R9, v);
         as_.str_base_off(ROP, REG::R9, 0U, true);
@@ -289,11 +288,9 @@ void Frontend::parseCodeSection() {
         bool const is64bit = (opcode == OPCode::I64_ADD);
 
         confirm(validationStack.size() >= 2U, "validation stack should have at least two elements for I32_ADD");
-        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
-                "validation stack top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandType::I64 : OperandType::I32)), "validation stack top mismatch");
         validationStack.pop();
-        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
-                "validation stack second top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandType::I64 : OperandType::I32)), "validation stack second top mismatch");
         // don't pop again since result will be pushed
 
         // Use R9 as right value scratch register
@@ -314,11 +311,9 @@ void Frontend::parseCodeSection() {
         bool const is64bit = (opcode == OPCode::I64_SUB);
 
         confirm(validationStack.size() >= 2U, "validation stack should have at least two elements for Ixx_SUB");
-        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
-                "validation stack top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandType::I64 : OperandType::I32)), "validation stack top mismatch");
         validationStack.pop();
-        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
-                "validation stack second top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandType::I64 : OperandType::I32)), "validation stack second top mismatch");
         // don't pop again since result will be pushed
 
         // Use R9 as right value scratch register
@@ -339,11 +334,9 @@ void Frontend::parseCodeSection() {
         bool const is64bit = (opcode == OPCode::I64_MUL);
 
         confirm(validationStack.size() >= 2U, "validation stack should have at least two elements for Ixx_MUL");
-        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
-                "validation stack top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandType::I64 : OperandType::I32)), "validation stack top mismatch");
         validationStack.pop();
-        confirm((validationStack.top() == (is64bit ? OperandStack::OperandType::I64 : OperandStack::OperandType::I32)),
-                "validation stack second top mismatch");
+        confirm((validationStack.top() == (is64bit ? OperandType::I64 : OperandType::I32)), "validation stack second top mismatch");
         // don't pop again since the same type result will be pushed
 
         // Use R9 as right value scratch register
@@ -397,7 +390,7 @@ void Frontend::parseCodeSection() {
           ///< Only debug use. returnType_ in stackElement is useless currently
           WasmType const ifReturnType = stack_.top().returnType_;
           if (ifReturnType != WasmType::TVOID) {
-            confirm(ifReturnType == OperandStack::toWasmType(validationStack.top()), "");
+            confirm(ifReturnType == toWasmType(validationStack.top()), "");
           }
 
           stack_.pop(); // pop IF
@@ -417,7 +410,7 @@ void Frontend::parseCodeSection() {
 
         // get condition value in R9
         confirm(!validationStack.empty(), "");
-        bool const is64bit = (validationStack.top() == OperandStack::OperandType::I64);
+        bool const is64bit = (validationStack.top() == OperandType::I64);
         op.subROP(is64bit);
         as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
         validationStack.pop();
@@ -619,7 +612,7 @@ void Frontend::parseCodeSection() {
       // FIX: bug in issue
       // LOG_YELLOW << "validationStack.size()=" << validationStack.size() << LOG_END;
       // assert(validationStack.size() == 1U && "validation stack should have one element for return value");
-      confirm(OperandStack::toWasmType(validationStack.top()) == funcTypeInfo.results[0], "validation stack top should be the return value type");
+      confirm(toWasmType(validationStack.top()) == funcTypeInfo.results[0], "validation stack top should be the return value type");
       validationStack.pop();
 
       bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;

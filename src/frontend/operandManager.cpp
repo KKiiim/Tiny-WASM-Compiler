@@ -4,6 +4,17 @@
 
 #include "src/common/logger.hpp"
 
+WasmType toWasmType(OperandType const tOperand) {
+  switch (tOperand) {
+  case OperandType::I32:
+    return WasmType::I32;
+  case OperandType::I64:
+    return WasmType::I64;
+  default:
+    confirm(false, "Invalid OperandType passed to toWasmType");
+  }
+}
+
 uint32_t OP::add(WasmType const localType) {
   uint32_t const startOffset = size_;
   switch (localType) {
