@@ -18,3 +18,24 @@ StackElement &Stack::top() {
   confirm(!v_.empty(), "");
   return v_.back();
 }
+
+StackElement const &Stack::lastControlFlowElement() const {
+  for (auto it = v_.rbegin(); it != v_.rend(); ++it) {
+    if (it->isControlFlow()) {
+      return *it;
+    }
+  }
+  confirm(false, "no control flow element in stack");
+  static StackElement const dummy{ElementType::NONE};
+  // Unreachable. To avoid compiler warning
+  return dummy;
+}
+
+void Stack::popToLastControlFlowElement() {
+  while (!v_.empty() && !v_.back().isControlFlow()) {
+    v_.pop_back();
+  }
+  // should pop the last control flow element itself
+  confirm((!v_.empty()) && v_.back().isControlFlow(), "");
+  v_.pop_back();
+}

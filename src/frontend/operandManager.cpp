@@ -3,15 +3,16 @@
 #include "operandManager.hpp"
 
 #include "src/common/logger.hpp"
+#include "src/common/stack.hpp"
 
-WasmType toWasmType(OperandType const tOperand) {
-  switch (tOperand) {
-  case OperandType::I32:
+WasmType toWasmType(ElementType const type) {
+  switch (type) {
+  case ElementType::I32:
     return WasmType::I32;
-  case OperandType::I64:
+  case ElementType::I64:
     return WasmType::I64;
   default:
-    confirm(false, "Invalid OperandType passed to toWasmType");
+    confirm(false, "Invalid value type passed to toWasmType");
   }
 }
 
