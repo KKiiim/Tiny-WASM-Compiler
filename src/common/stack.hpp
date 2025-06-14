@@ -53,7 +53,7 @@ public:
   }
   StackElement const &lastControlFlowElement() const;
 
-  ///< Including thr last control flow element itself
+  ///< Including the last control flow element itself
   void popToLastControlFlowElement();
 
 private:
