@@ -362,6 +362,7 @@ void Frontend::parseCodeSection() {
 
             ///< Function may have other values in stack, it's valid. Use the last value as return value
             stack_.popToLastControlFlowElement(); // including pop FUNC_START
+            // FIXME(#59): should alse pop redundant value in runtime operand stack
             stack_.push(retValue);
 
             bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
