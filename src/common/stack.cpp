@@ -39,3 +39,21 @@ void Stack::popToLastControlFlowElement() {
   confirm((!v_.empty()) && v_.back().isControlFlow(), "");
   v_.pop_back();
 }
+
+StackElement const &Stack::findTargetBlock(uint32_t const depth) const {
+  // TODO(): not support if and block mixed
+  uint32_t blockCounter = depth;
+  // find from last to first
+  for (auto it = v_.rbegin(); it != v_.rend(); ++it) {
+    if (it->elementType_ == ElementType::BLOCK) {
+      if (blockCounter == 0U) {
+        return *it;
+      }
+      blockCounter--;
+    }
+  }
+  confirm(false, "no target block found");
+  static StackElement const dummy{ElementType::NONE};
+  // Unreachable. To avoid compiler warning
+  return dummy;
+}

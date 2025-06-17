@@ -15,6 +15,8 @@ enum class ElementType : uint8_t {
   ELSE,
   END,
 
+  BLOCK,
+
   I32,
   I64,
 };
@@ -32,12 +34,14 @@ public:
   }
   inline bool isControlFlow() const {
     return (elementType_ == ElementType::FUNC_START || elementType_ == ElementType::IF || elementType_ == ElementType::ELSE ||
-            elementType_ == ElementType::END);
+            elementType_ == ElementType::END || elementType_ == ElementType::BLOCK);
   }
   ElementType elementType_;
 
   WasmType returnType_ = WasmType::INVALID;
 
+  ///< Label index for BLOCK only yet. Start from 1, align with wasm spec.
+  uint32_t labelIndex = static_cast<uint32_t>(-1);
   ///< Point the start of the branch instruction as offset relative to the output binary.
   // Used for relocation patching in cross control flow circumstance
   uint32_t relpatchInsPos = 0;
@@ -55,6 +59,8 @@ public:
 
   ///< Including the last control flow element itself
   void popToLastControlFlowElement();
+
+  StackElement const &findTargetBlock(uint32_t const depth) const;
 
 private:
   std::vector<StackElement> v_;

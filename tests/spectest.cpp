@@ -65,6 +65,20 @@ TEST(Chapter05, div) {
   }
 }
 
+TEST(Chapter06, block) {
+  JsonReader const jsonReader("tests/testcases/tmp/block.json");
+  LOG_YELLOW << ConsoleYellow << "Testing block.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    Compiler compiler;
+    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
+
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
+    for (const auto &testCase : module.testCases) {
+      execTest(testCase, compiler);
+    }
+  }
+}
+
 //////////////////////////////////////////////
 ///< Demo: test cases with hardcoded input params
 

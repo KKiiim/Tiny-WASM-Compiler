@@ -1,6 +1,6 @@
 #include "relpatch.hpp"
 
-void Relpatch::linkedHere() const {
+void Relpatch::linkToHere() const {
   // The jump instruction is a placeholder, we need to patch it with the correct address
   int32_t const currentOffset = static_cast<int32_t>((as_.getCurrentOffset() - jumpInsPos_) / 4);
   if (isConditional_) {
