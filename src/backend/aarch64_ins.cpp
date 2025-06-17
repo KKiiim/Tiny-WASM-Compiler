@@ -257,6 +257,23 @@ void Assembler::udiv_r_r(REG const destReg, REG const firstSrcReg, REG const sec
   append(opcode);
 }
 
+void Assembler::rBits_r_r(REG const destReg, REG const srcReg, bool const is64bit) {
+  // sf 101 1010 1100 ... Rn Rd
+  // 5ac00000 dac00000
+  OPCodeTemplate opcode = is64bit ? 0x5ac00000 : 0xdac00000;
+  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
+  append(opcode);
+}
+void Assembler::clz_r_r(REG const destReg, REG const srcReg, bool const is64bit) {
+  // sf 101 1010 1100 0000 0001 00 Rn Rd
+  // 5ac01000 dac01000
+  OPCodeTemplate opcode = is64bit ? 0x5ac01000 : 0xdac01000;
+  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
+  append(opcode);
+}
+
 /////////////////////////////////////////////////////////////////
 //< Customized instructions
 /////////////////////////////////////////////////////////////////
@@ -269,7 +286,10 @@ void Assembler::emit_mov_x_imm64(REG const destReg, uint64_t const imm) {
 }
 void Assembler::emit_mov_w_imm32(REG const destReg, uint32_t const imm) {
   mov_r_imm16(destReg, imm & 0xFFFFU, false);
-  movk_r_imm16(destReg, (imm >> 16U) & 0xFFFFU, 1, false);
+  if (((imm >> 16U) & 0xFFFFU) != 0U) {
+    // If the upper 16 bits are not zero, we need to move them as well
+    movk_r_imm16(destReg, (imm >> 16U) & 0xFFFFU, 1, false);
+  }
 }
 
 void Assembler::decreaseSPWithClean(uint32_t const bytes) {

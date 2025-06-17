@@ -12,7 +12,7 @@ public:
       : as_(assembler), jumpInsPos_(assembler.getCurrentOffset()), isConditional_(isConditional) {
   }
 
-  void linkedHere() const;
+  void linkToHere() const;
 
 private:
   Assembler &as_;

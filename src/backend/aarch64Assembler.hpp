@@ -76,6 +76,11 @@ public:
   void sdiv_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
   void udiv_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit);
 
+  /// @brief reverse bytes in a register
+  void rBits_r_r(REG const destReg, REG const srcReg, bool const is64bit);
+  /// @brief Count leading zeros in a register
+  void clz_r_r(REG const destReg, REG const srcReg, bool const is64bit);
+
   /////////////////////////////////////////////////////////////////
   //< Customized instructions
   /////////////////////////////////////////////////////////////////

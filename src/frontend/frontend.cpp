@@ -198,6 +198,7 @@ void Frontend::parseCodeSection() {
     ///< to handle operand variables
     // TODO(): should split to different class
     OP op{as_};
+    LabelManager labelManager{as_};
 
     while (localDeclIndex++ < localDeclCount) {
       uint32_t const currentTypeLocalCount = br_.readLEB128<uint32_t>();
@@ -212,6 +213,7 @@ void Frontend::parseCodeSection() {
     if (stackUsage != 0U) {
       as_.decreaseSPWithClean(stackUsage);
     }
+
     while (br_.getOffset() < (preParseFuncBROffset + funcBodySize)) {
       OPCode const opcode = br_.readByte<OPCode>();
 
@@ -362,6 +364,7 @@ void Frontend::parseCodeSection() {
 
             ///< Function may have other values in stack, it's valid. Use the last value as return value
             stack_.popToLastControlFlowElement(); // including pop FUNC_START
+            // FIXME(#59): should else pop redundant value in runtime operand stack
             stack_.push(retValue);
 
             bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
@@ -439,6 +442,25 @@ void Frontend::parseCodeSection() {
             stack_.pop(); // pop ELSE
             confirm(stack_.top().elementType_ == ElementType::IF, "IF block should be the last control flow element");
             stack_.pop(); // pop IF
+          }
+
+          break;
+        }
+        case ElementType::BLOCK: {
+          // BLOCK->END->OTHER
+          WasmType const blockReturnType = lastControlFlowElement.returnType_;
+          labelManager.fillTargetJumpAddress(lastControlFlowElement.labelIndex, as_.getCurrentOffset());
+          if (blockReturnType != WasmType::TVOID) {
+            // BLOCK has return value
+            confirm(blockReturnType == toWasmType(stack_.top().elementType_), "BLOCK return type should match the validation");
+            StackElement const retValue = stack_.pop();
+            confirm(&stack_.top() == &lastControlFlowElement, "BLOCK should not have other values exclude the return value");
+            stack_.pop();          // pop BLOCK
+            stack_.push(retValue); // push the return value back to stack
+          } else {
+            // BLOCK->END case, no return value
+            confirm(&stack_.top() == &lastControlFlowElement, "BLOCK should be the last control flow element");
+            stack_.pop(); // pop BLOCK
           }
 
           break;
@@ -527,7 +549,7 @@ void Frontend::parseCodeSection() {
         as_.cmp_r_imm(REG::R9, 0U, is64bit);
         Relpatch const notDiv0 = as_.prepareJmp(CC::NE);
         as_.setTrap(Trapcode::DIV_0);
-        notDiv0.linkedHere();
+        notDiv0.linkToHere();
         ///< Divisor is not zero, continue to do division
         ///< If divisor is -1 and dividend is INT_MIN, it will trap with integer overflow
         // get dividend in R10
@@ -555,8 +577,8 @@ void Frontend::parseCodeSection() {
         Relpatch const notMinusOne = as_.prepareJmp(CC::NE);
         as_.setTrap(Trapcode::Integer_overflow);
 
-        notIntMin.linkedHere();
-        notMinusOne.linkedHere();
+        notIntMin.linkToHere();
+        notMinusOne.linkToHere();
         // safe division
         if (opcode == OPCode::I32_DIV_S || opcode == OPCode::I64_DIV_S) {
           as_.sdiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
@@ -568,18 +590,115 @@ void Frontend::parseCodeSection() {
 
         break;
       }
+      case OPCode::BLOCK: {
+        WasmType const blockReturnType = br_.readByte<WasmType>();
+        // NOLINTNEXTLINE(readability-simplify-boolean-expr)
+        confirm((blockReturnType == WasmType::TVOID) || (blockReturnType == WasmType::I32) || (blockReturnType == WasmType::I64),
+                "only i32, i64 or void supported for BLOCK return type");
+        StackElement blockElement{ElementType::BLOCK};
+        blockElement.returnType_ = blockReturnType;
+        blockElement.labelIndex = labelManager.registerLabel();
+        stack_.push(blockElement);
+        break;
+      }
+      case OPCode::BR: {
+        uint32_t const breakDepth{br_.readLEB128<uint32_t>()};
+        StackElement const targetElement = stack_.findTargetBlock(breakDepth);
+
+        // validate the target block return type
+        if (targetElement.returnType_ != WasmType::TVOID) {
+          confirm(stack_.top().isValue(), "must value type");
+          confirm(targetElement.returnType_ == toWasmType(stack_.top().elementType_), "target block return type should match the validation");
+        }
+
+        labelManager.registerBr(false, targetElement.labelIndex, as_.getCurrentOffset());
+        as_.prepare_b();
+
+        // Should then skip all until the next END
+        // Current block has no more emit, so current block label can filled now
+        // StackElement const currentBlock = stack_.findTargetBlock(0U);
+        // labelManager.fillTargetJumpAddress(currentBlock.labelIndex, as_.getCurrentOffset());
+        // TODO(): How to skip
+        break;
+      }
+      case OPCode::BR_IF: {
+        uint32_t const breakDepth{br_.readLEB128<uint32_t>()};
+        StackElement const targetElement = stack_.findTargetBlock(breakDepth);
+        // validate the condition value
+        StackElement const condition = stack_.pop();
+        confirm(condition.isValue() && (!condition.isI64()), "condition must be i32 value type");
+        // pop the condition value at runtime
+        op.subROP(false);
+        as_.ldr_base_off(REG::R9, ROP, 0U, false);
+        as_.cmp_r_imm(REG::R9, 0U, false);
+        labelManager.registerBr(true, targetElement.labelIndex, as_.getCurrentOffset());
+        as_.prepare_b_cond(CC::NE);
+
+        // validate the target block return type
+        if (targetElement.returnType_ != WasmType::TVOID) {
+          confirm(stack_.top().isValue(), "must value type");
+          confirm(targetElement.returnType_ == toWasmType(stack_.top().elementType_), "target block return type should match the validation");
+        }
+
+        break;
+      }
+      case OPCode::DROP: {
+        confirm(stack_.top().isValue(), "must be value type");
+        op.subROP(stack_.top().isI64()); // drop
+        stack_.pop();
+        break;
+      }
+      case OPCode::I32_CTZ:
+      case OPCode::I64_CTZ: {
+        bool const is64bit = (opcode == OPCode::I64_CTZ);
+        confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must be value type");
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.rBits_r_r(REG::R9, REG::R9, is64bit);
+        as_.clz_r_r(REG::R9, REG::R9, is64bit);
+        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+        op.addROP(is64bit);
+        // don't pop stack, since the ctz result is the same type element
+        break;
+      }
+      case OPCode::I64_LE_U:
+      case OPCode::I32_LE_U: {
+        bool const is64bit = (opcode == OPCode::I64_LE_U);
+        StackElement const right = stack_.pop();
+        StackElement const left = stack_.pop();
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        confirm(right.isI64() == is64bit, "must be value type");
+        confirm(left.isI64() == is64bit, "must be value type");
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+
+        // TODO(): imply
+        //
+        stack_.push(StackElement{ElementType::I32});
+        break;
+      }
+      case OPCode::I32_EQZ: {
+        confirm(stack_.top().isValue() && (!stack_.top().isI64()), "must be i32 value type");
+        op.subROP(false);
+        as_.ldr_base_off(REG::R9, ROP, 0U, false);
+        as_.cmp_r_imm(REG::R9, 0U, false);
+        Relpatch const notZero = as_.prepareJmp(CC::NE);
+        as_.emit_mov_w_imm32(REG::R9, 1U); // if zero, set 1
+        notZero.linkToHere();
+        as_.emit_mov_w_imm32(REG::R9, 0U); // if not zero, set 0
+        as_.str_base_off(ROP, REG::R9, 0U, false);
+        op.addROP(false);
+        // don't pop stack, since the eqz result is the same type element
+        break;
+      }
       case OPCode::UNREACHABLE:
-      case OPCode::BLOCK:
       case OPCode::LOOP:
-      case OPCode::BR:
-      case OPCode::BR_IF:
       case OPCode::BR_TABLE:
       case OPCode::CALL:
       case OPCode::CALL_INDIRECT:
       case OPCode::REF_NULL:
       case OPCode::REF_IS_NULL:
       case OPCode::REF_FUNC:
-      case OPCode::DROP:
       case OPCode::SELECT:
       case OPCode::SELECT_T:
       case OPCode::GLOBAL_GET:
@@ -613,7 +732,6 @@ void Frontend::parseCodeSection() {
       case OPCode::MEMORY_GROW:
       case OPCode::F32_CONST:
       case OPCode::F64_CONST:
-      case OPCode::I32_EQZ:
       case OPCode::I32_EQ:
       case OPCode::I32_NE:
       case OPCode::I32_LT_S:
@@ -621,7 +739,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_GT_S:
       case OPCode::I32_GT_U:
       case OPCode::I32_LE_S:
-      case OPCode::I32_LE_U:
       case OPCode::I32_GE_S:
       case OPCode::I32_GE_U:
       case OPCode::I64_EQZ:
@@ -632,11 +749,9 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_GT_S:
       case OPCode::I64_GT_U:
       case OPCode::I64_LE_S:
-      case OPCode::I64_LE_U:
       case OPCode::I64_GE_S:
       case OPCode::I64_GE_U:
       case OPCode::I32_CLZ:
-      case OPCode::I32_CTZ:
       case OPCode::I32_POPCNT:
       case OPCode::I32_REM_S:
       case OPCode::I32_REM_U:
@@ -649,7 +764,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_ROTL:
       case OPCode::I32_ROTR:
       case OPCode::I64_CLZ:
-      case OPCode::I64_CTZ:
       case OPCode::I64_POPCNT:
       case OPCode::I64_REM_S:
       case OPCode::I64_REM_U:
@@ -668,6 +782,8 @@ void Frontend::parseCodeSection() {
     confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "must end with all code parsed");
 
     module_.functionInfos_.push_back(std::move(funcBody));
+    labelManager.relpatchAllLabels(); // relpatch all labels in this function body
+    // labelManager will destruct
   }
 
   confirm(funcNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");
@@ -678,6 +794,21 @@ void Frontend::parseNameSection() {
   // for (uint32_t i = 0; i < stringLength; i++) {
   //   name += static_cast<char>(br_.readByte());
   // }
+}
+
+void Frontend::LabelManager::relpatchAllLabels() {
+  for (LabelManager::BrInfo const &brInfo : brIfInfos_) {
+    uint32_t const branchInsPosOff = brInfo.BrInsStartAddress;
+    uint32_t const whereToJump = labels_[brInfo.labelIndex - 1U]; // should -1 as index in vector
+    if (brInfo.isBrIf) {
+      // condition jump instruction
+      int32_t const condOffset = static_cast<int32_t>((static_cast<int32_t>(whereToJump) - branchInsPosOff) / 4);
+      as_.set_b_cond_off(branchInsPosOff, condOffset);
+    } else {
+      int32_t const jumpOffset = static_cast<int32_t>((static_cast<int32_t>(whereToJump) - branchInsPosOff) / 4);
+      as_.set_b_off(branchInsPosOff, jumpOffset);
+    }
+  }
 }
 
 void Frontend::logParsedInfo() {
