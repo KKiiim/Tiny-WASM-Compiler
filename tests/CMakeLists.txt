@@ -1,11 +1,8 @@
-set(CMAKE_CXX_STANDARD 17)
 project(Spectest)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} sourceFiles)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-add_executable(${PROJECT_NAME} ${sourceFiles} ${COMPILER_SRC_FILES})
+add_executable(${PROJECT_NAME} ${sourceFiles})
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${WASM_COMPILER_INCLUDE_ROOT}/third_party/googletest/googletest/include
@@ -13,7 +10,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    capstone
+    lib_src
     gtest  # libgtest.a
     gtest_main # libgtest_main.a
 )
