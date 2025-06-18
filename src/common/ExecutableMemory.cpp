@@ -1,11 +1,11 @@
 #include <capstone/capstone.h>
 #include <cstdint>
 #include <iomanip>
+#include <sys/mman.h>
 
 #include "ExecutableMemory.hpp"
 #include "util.hpp"
 
-#include "src/backend/aarch64_encoding.hpp"
 #include "src/common/logger.hpp"
 
 static constexpr size_t PAGE_SIZE = 4096;

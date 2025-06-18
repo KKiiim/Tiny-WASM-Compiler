@@ -3,8 +3,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <stdexcept>
-#include <sys/mman.h>
 
 class ExecutableMemory {
 public:
