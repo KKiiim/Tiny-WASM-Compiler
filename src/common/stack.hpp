@@ -24,17 +24,17 @@ class StackElement final {
 public:
   explicit StackElement(ElementType type) : elementType_(type) {
     confirm(type != ElementType::NONE, "must not be NONE");
+    isTypeValue_ = (elementType_ == ElementType::I32 || elementType_ == ElementType::I64);
   }
   inline bool isValue() const {
-    return (elementType_ == ElementType::I32 || elementType_ == ElementType::I64);
+    return isTypeValue_;
   }
   inline bool isI64() const {
-    confirm(isValue(), "must be value type");
+    confirm(isTypeValue_, "must be value type");
     return elementType_ == ElementType::I64;
   }
   inline bool isControlFlow() const {
-    return (elementType_ == ElementType::FUNC_START || elementType_ == ElementType::IF || elementType_ == ElementType::ELSE ||
-            elementType_ == ElementType::END || elementType_ == ElementType::BLOCK);
+    return (!isTypeValue_);
   }
   ElementType elementType_;
 
@@ -45,6 +45,11 @@ public:
   ///< Point the start of the branch instruction as offset relative to the output binary.
   // Used for relocation patching in cross control flow circumstance
   uint32_t relpatchInsPos = 0;
+
+  bool unreachable = false;
+
+private:
+  bool isTypeValue_ = true;
 };
 
 class Stack final {
@@ -61,6 +66,9 @@ public:
   void popToLastControlFlowElement();
 
   StackElement const &findTargetBlock(uint32_t const depth) const;
+
+  void setCurrentBlockUnreachable();
+  void setCurrentFrameUnreachable();
 
 private:
   std::vector<StackElement> v_;

@@ -57,3 +57,24 @@ StackElement const &Stack::findTargetBlock(uint32_t const depth) const {
   // Unreachable. To avoid compiler warning
   return dummy;
 }
+
+void Stack::setCurrentBlockUnreachable() {
+  for (auto it = v_.rbegin(); it != v_.rend(); ++it) {
+    if (it->elementType_ == ElementType::BLOCK) {
+      it->unreachable = true;
+      return;
+    }
+  }
+  LOG_YELLOW << "not in a block but try to setCurrentBlockUnreachable" << LOG_END;
+}
+void Stack::setCurrentFrameUnreachable() {
+  // current no `call`, so the end of stackElement always FUNC_START
+  confirm((v_.begin()->elementType_ == ElementType::FUNC_START), "must");
+  for (auto it = v_.rbegin(); it != v_.rend(); ++it) {
+    if (it->elementType_ == ElementType::FUNC_START) {
+      it->unreachable = true;
+      return;
+    }
+  }
+  LOG_YELLOW << "not in a block but try to setCurrentFrameUnreachable" << LOG_END;
+}
