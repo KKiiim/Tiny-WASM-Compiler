@@ -214,7 +214,6 @@ void Frontend::parseCodeSection() {
       as_.decreaseSPWithClean(stackUsage);
     }
 
-    OPCode frontOpcode = OPCode::NOP;
     while (br_.getOffset() < (preParseFuncBROffset + funcBodySize)) {
       OPCode const opcode = br_.readByte<OPCode>();
 
@@ -223,12 +222,6 @@ void Frontend::parseCodeSection() {
         break; ///< NOP, do nothing
       }
       case OPCode::RETURN: {
-        // Only support RETURN---then---(END)-->FUNC_END which means not follow the WASM-SPEC to pop and consider behind code
-        // So, skip here, and handle return when meet FUNC_END
-        // FIXME: It is assumed here that RETURN will not appear in if/else
-        confirm(br_.peekByte<OPCode>() == OPCode::END, "must be END after RETURN");
-        // TODO(): actually, may have multi-END and the last is matched FUNC_END
-
         if (funcTypeInfo.results.size() == 1U) {
           // function with return value
           confirm(stack_.top().isValue(), "should at least have one value element for return value");
@@ -379,11 +372,6 @@ void Frontend::parseCodeSection() {
         switch (lastControlFlowElement.elementType_) {
         case ElementType::FUNC_START: {
           confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "");
-          ///< Handle RETURN--->FUNC_END case since return-prepare has done in OPCode::RETURN case
-          // if (frontOpcode == OPCode::RETURN) {
-          //   break;
-          // }
-
           if (funcTypeInfo.results.size() == 1U) {
             // function with return value
             confirm(stack_.top().isValue(), "should at least have one value element for return value");
@@ -817,9 +805,6 @@ void Frontend::parseCodeSection() {
         throw std::runtime_error("unsupported OPCode " + std::to_string(static_cast<uint32_t>(opcode)));
         break;
       }
-
-      frontOpcode = opcode; // record the last opcode
-      static_cast<void>(frontOpcode);
     }
     confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "must end with all code parsed");
 

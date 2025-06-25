@@ -22,6 +22,11 @@ IF->B.c->TRUE_BLOCK->B->ELSE->FALSE_BLOCK->END->OTHER
 IF->B.c->TRUE_BLOCK->OTHER
 ```
 
+## Some workaround
+
+- Assumed RETURN will not appear in if/else branch
+- Explicit OPCode::Return in wat will cause another ret emitted at FUNC_END
+
 ## TODO
 
 1. Only save dirty register before call. Need record register usage reference

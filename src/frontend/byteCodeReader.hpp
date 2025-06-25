@@ -51,20 +51,6 @@ public:
     return dest;
   }
 
-  /// @brief Read but not advance the read offset
-  template <class Dest> Dest peekByte() {
-    if (offset_ == bytecode_.size()) {
-      throw std::runtime_error("offset " + std::to_string(offset_) + " readByte failed");
-    }
-
-    static_assert(std::is_trivially_copyable<Dest>::value, "readByte requires the destination type to be copyable");
-    static_assert(sizeof(Dest) == 1, "Size of type of readByte needs to be 1");
-    Dest dest;
-    uint8_t const *const oldPtr = &bytecode_[offset_];
-    static_cast<void>(std::memcpy(&dest, oldPtr, static_cast<size_t>(sizeof(Dest))));
-    return dest;
-  }
-
   ///
   /// @brief Read fixed 4 bytes from the binary (host-endian-independently from little endian) into a uint32_t
   ///
