@@ -214,16 +214,39 @@ void Frontend::parseCodeSection() {
       as_.decreaseSPWithClean(stackUsage);
     }
 
+    OPCode frontOpcode = OPCode::NOP;
     while (br_.getOffset() < (preParseFuncBROffset + funcBodySize)) {
       OPCode const opcode = br_.readByte<OPCode>();
 
       switch (opcode) {
       case OPCode::NOP: {
-        continue;
+        break; ///< NOP, do nothing
       }
       case OPCode::RETURN: {
-        // do check after END
-        continue;
+        // Only support RETURN---then---(END)-->FUNC_END which means not follow the WASM-SPEC to pop and consider behind code
+        // So, skip here, and handle return when meet FUNC_END
+        // FIXME: It is assumed here that RETURN will not appear in if/else
+        confirm(br_.peekByte<OPCode>() == OPCode::END, "must be END after RETURN");
+        // TODO(): actually, may have multi-END and the last is matched FUNC_END
+
+        if (funcTypeInfo.results.size() == 1U) {
+          // function with return value
+          confirm(stack_.top().isValue(), "should at least have one value element for return value");
+          StackElement const retValue = stack_.top();
+          confirm(toWasmType(retValue.elementType_) == funcTypeInfo.results[0], "validation stack top should be the return value type");
+
+          bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
+          // prepare return value
+          op.subROP(is64bit);
+          as_.ldr_base_off(REG::R0, REG::R28, 0U, is64bit);
+        }
+        if (stackUsage != 0U) {
+          as_.inc_sp(stackUsage);
+        }
+        as_.ret();
+
+        stack_.setCurrentFrameFrontBlocksUnreachable();
+        break;
       }
       case OPCode::LOCAL_GET: {
         uint32_t const localIdx{br_.readLEB128<uint32_t>()};
@@ -356,6 +379,11 @@ void Frontend::parseCodeSection() {
         switch (lastControlFlowElement.elementType_) {
         case ElementType::FUNC_START: {
           confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "");
+          ///< Handle RETURN--->FUNC_END case since return-prepare has done in OPCode::RETURN case
+          // if (frontOpcode == OPCode::RETURN) {
+          //   break;
+          // }
+
           if (funcTypeInfo.results.size() == 1U) {
             // function with return value
             confirm(stack_.top().isValue(), "should at least have one value element for return value");
@@ -450,17 +478,28 @@ void Frontend::parseCodeSection() {
           // BLOCK->END->OTHER
           WasmType const blockReturnType = lastControlFlowElement.returnType_;
           labelManager.fillTargetJumpAddress(lastControlFlowElement.labelIndex, as_.getCurrentOffset());
-          if (blockReturnType != WasmType::TVOID) {
-            // BLOCK has return value
-            confirm(blockReturnType == toWasmType(stack_.top().elementType_), "BLOCK return type should match the validation");
-            StackElement const retValue = stack_.pop();
-            confirm(&stack_.top() == &lastControlFlowElement, "BLOCK should not have other values exclude the return value");
-            stack_.pop();          // pop BLOCK
-            stack_.push(retValue); // push the return value back to stack
+
+          if (lastControlFlowElement.isUnreachableBlock()) {
+            stack_.popToLastControlFlowElement(); // including pop the Block
+            if (blockReturnType != WasmType::TVOID) {
+              ElementType const result = blockReturnType == WasmType::I64 ? ElementType::I64 : ElementType::I32;
+              // push a dummy value to keep stack valid
+              stack_.push(StackElement{result});
+            }
           } else {
-            // BLOCK->END case, no return value
-            confirm(&stack_.top() == &lastControlFlowElement, "BLOCK should be the last control flow element");
-            stack_.pop(); // pop BLOCK
+            // check block return
+            if (blockReturnType != WasmType::TVOID) {
+              // BLOCK has return value
+              confirm(blockReturnType == toWasmType(stack_.top().elementType_), "BLOCK return type should match the validation");
+              StackElement const retValue = stack_.pop();
+              confirm(&stack_.top() == &lastControlFlowElement, "BLOCK should not have other values exclude the return value");
+              stack_.pop();          // pop BLOCK
+              stack_.push(retValue); // push the return value back to stack
+            } else {
+              // BLOCK->END case, no return value
+              confirm(&stack_.top() == &lastControlFlowElement, "BLOCK should be the last control flow element");
+              stack_.pop(); // pop BLOCK
+            }
           }
 
           break;
@@ -778,6 +817,9 @@ void Frontend::parseCodeSection() {
         throw std::runtime_error("unsupported OPCode " + std::to_string(static_cast<uint32_t>(opcode)));
         break;
       }
+
+      frontOpcode = opcode; // record the last opcode
+      static_cast<void>(frontOpcode);
     }
     confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "must end with all code parsed");
 

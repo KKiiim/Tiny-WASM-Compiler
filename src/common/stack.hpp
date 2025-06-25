@@ -36,6 +36,15 @@ public:
     return (elementType_ == ElementType::FUNC_START || elementType_ == ElementType::IF || elementType_ == ElementType::ELSE ||
             elementType_ == ElementType::END || elementType_ == ElementType::BLOCK);
   }
+  inline void setBlockUnreachable() {
+    confirm(elementType_ == ElementType::BLOCK, "must");
+    unreachableBlock = true;
+  }
+  inline bool isUnreachableBlock() const {
+    confirm(elementType_ == ElementType::BLOCK, "must");
+    return unreachableBlock;
+  }
+
   ElementType elementType_;
 
   WasmType returnType_ = WasmType::INVALID;
@@ -45,6 +54,9 @@ public:
   ///< Point the start of the branch instruction as offset relative to the output binary.
   // Used for relocation patching in cross control flow circumstance
   uint32_t relpatchInsPos = 0;
+
+private:
+  bool unreachableBlock = false;
 };
 
 class Stack final {
@@ -61,6 +73,8 @@ public:
   void popToLastControlFlowElement();
 
   StackElement const &findTargetBlock(uint32_t const depth) const;
+
+  void setCurrentFrameFrontBlocksUnreachable();
 
 private:
   std::vector<StackElement> v_;

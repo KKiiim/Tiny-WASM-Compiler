@@ -40,6 +40,18 @@ void Stack::popToLastControlFlowElement() {
   v_.pop_back();
 }
 
+void Stack::setCurrentFrameFrontBlocksUnreachable() {
+  for (auto it = v_.rbegin(); it != v_.rend(); ++it) {
+    if (it->elementType_ == ElementType::FUNC_START) {
+      // only one FUNC_START supported yet
+      break;
+    }
+    if (it->elementType_ == ElementType::BLOCK) {
+      it->setBlockUnreachable();
+    }
+  }
+}
+
 StackElement const &Stack::findTargetBlock(uint32_t const depth) const {
   // TODO(): not support if and block mixed
   uint32_t blockCounter = depth;
