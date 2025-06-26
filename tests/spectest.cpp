@@ -95,6 +95,19 @@ TEST(OptTest, i32) {
     }
   }
 }
+TEST(OptTest, i64) {
+  JsonReader const jsonReader("tests/testcases/tmp/opt_i64.json");
+  LOG_YELLOW << ConsoleYellow << "Testing opt_i64.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    Compiler compiler;
+    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
+
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
+    for (const auto &testCase : module.testCases) {
+      execTest(testCase, compiler);
+    }
+  }
+}
 
 //////////////////////////////////////////////
 ///< Demo: test cases with hardcoded input params
