@@ -465,7 +465,9 @@ void Frontend::parseCodeSection() {
         case ElementType::BLOCK: {
           // BLOCK->END->OTHER
           WasmType const blockReturnType = lastControlFlowElement.returnType_;
-          labelManager.fillTargetJumpAddress(lastControlFlowElement.labelIndex, as_.getCurrentOffset());
+          if (!lastControlFlowElement.isLoopBlock) {
+            labelManager.fillTargetJumpAddress(lastControlFlowElement.labelIndex, as_.getCurrentOffset());
+          }
 
           if (lastControlFlowElement.isUnreachableBlock()) {
             stack_.popToLastControlFlowElement(); // including pop the Block
@@ -739,8 +741,72 @@ void Frontend::parseCodeSection() {
         stack_.push(StackElement{ElementType::I32});
         break;
       }
+      case OPCode::LOOP: {
+        WasmType const loopReturnType = br_.readByte<WasmType>();
+        confirm(((loopReturnType == WasmType::TVOID) || (loopReturnType == WasmType::I32) || (loopReturnType == WasmType::I64)),
+                "only i32, i64 or void supported for LOOP return type");
+        StackElement loopElement{ElementType::BLOCK};
+        loopElement.returnType_ = loopReturnType;
+        loopElement.labelIndex = labelManager.registerLabel();
+        loopElement.isLoopBlock = true;
+        stack_.push(loopElement);
+
+        labelManager.fillTargetJumpAddress(loopElement.labelIndex, as_.getCurrentOffset());
+        break;
+      }
+      case OPCode::I32_EQ:
+      case OPCode::I64_EQ: {
+        bool const is64bit = (opcode == OPCode::I64_EQ);
+        StackElement const right = stack_.pop();
+        StackElement const left = stack_.pop();
+        confirm((right.isI64() == is64bit && left.isI64() == is64bit), "must match value type");
+
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+
+        REG const resultReg = REG::R11;
+        // prepare default equal, set 1 (if-else downgraded to if)
+        as_.emit_mov_w_imm32(resultReg, 1U);
+        as_.cmp_r_r(REG::R10, REG::R9, is64bit);
+        Relpatch const equal = as_.prepareJmp(CC::EQ);
+        // not equal
+        as_.emit_mov_w_imm32(resultReg, 0U);
+        equal.linkToHere();
+        // Store result to ROP
+        as_.str_base_off(ROP, resultReg, 0U, false);
+        op.addROP(false);
+        stack_.push(StackElement{ElementType::I32});
+        break;
+      }
+      case OPCode::I32_GT_U:
+      case OPCode::I64_GT_U: {
+        bool const is64bit = (opcode == OPCode::I64_GT_U);
+        StackElement const right = stack_.pop();
+        StackElement const left = stack_.pop();
+        confirm((right.isI64() == is64bit && left.isI64() == is64bit), "must match value type");
+
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+
+        REG const resultReg = REG::R11;
+        // prepare default true (CC::HI for unsigned)
+        as_.emit_mov_w_imm32(resultReg, 1U);
+        as_.cmp_r_r(REG::R10, REG::R9, is64bit);
+        Relpatch const higher = as_.prepareJmp(CC::HI);
+        // not higher
+        as_.emit_mov_w_imm32(resultReg, 0U);
+        higher.linkToHere();
+        // Store result to ROP
+        as_.str_base_off(ROP, resultReg, 0U, false);
+        op.addROP(false);
+        stack_.push(StackElement{ElementType::I32});
+        break;
+      }
       case OPCode::UNREACHABLE:
-      case OPCode::LOOP:
       case OPCode::BR_TABLE:
       case OPCode::CALL:
       case OPCode::CALL_INDIRECT:
@@ -780,21 +846,17 @@ void Frontend::parseCodeSection() {
       case OPCode::MEMORY_GROW:
       case OPCode::F32_CONST:
       case OPCode::F64_CONST:
-      case OPCode::I32_EQ:
       case OPCode::I32_NE:
       case OPCode::I32_LT_S:
       case OPCode::I32_LT_U:
       case OPCode::I32_GT_S:
-      case OPCode::I32_GT_U:
       case OPCode::I32_LE_S:
       case OPCode::I32_GE_S:
       case OPCode::I32_GE_U:
-      case OPCode::I64_EQ:
       case OPCode::I64_NE:
       case OPCode::I64_LT_S:
       case OPCode::I64_LT_U:
       case OPCode::I64_GT_S:
-      case OPCode::I64_GT_U:
       case OPCode::I64_LE_S:
       case OPCode::I64_GE_S:
       case OPCode::I64_GE_U:
@@ -849,10 +911,10 @@ void Frontend::LabelManager::relpatchAllLabels() {
     uint32_t const whereToJump = labels_[brInfo.labelIndex - 1U]; // should -1 as index in vector
     if (brInfo.isBrIf) {
       // condition jump instruction
-      int32_t const condOffset = static_cast<int32_t>((static_cast<int32_t>(whereToJump) - branchInsPosOff) / 4);
+      int32_t const condOffset = static_cast<int32_t>(whereToJump - branchInsPosOff) / 4;
       as_.set_b_cond_off(branchInsPosOff, condOffset);
     } else {
-      int32_t const jumpOffset = static_cast<int32_t>((static_cast<int32_t>(whereToJump) - branchInsPosOff) / 4);
+      int32_t const jumpOffset = static_cast<int32_t>(whereToJump - branchInsPosOff) / 4;
       as_.set_b_off(branchInsPosOff, jumpOffset);
     }
   }
