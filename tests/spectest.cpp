@@ -51,19 +51,19 @@ TEST(Chapter04, if_) {
   }
 }
 
-// TEST(Chapter05, div) {
-//   JsonReader const jsonReader("tests/testcases/tmp/div.json");
-//   LOG_YELLOW << ConsoleYellow << "Testing div.json" << LOG_END;
-//   for (const auto &module : jsonReader.modules_) {
-//     Compiler compiler;
-//     compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
+TEST(Chapter05, div) {
+  JsonReader const jsonReader("tests/testcases/tmp/div.json");
+  LOG_YELLOW << ConsoleYellow << "Testing div.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    Compiler compiler;
+    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
 
-//     LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-//     for (const auto &testCase : module.testCases) {
-//       execTest(testCase, compiler);
-//     }
-//   }
-// }
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
+    for (const auto &testCase : module.testCases) {
+      execTest(testCase, compiler);
+    }
+  }
+}
 
 TEST(Chapter06, block) {
   JsonReader const jsonReader("tests/testcases/tmp/block.json");
