@@ -260,7 +260,7 @@ void Assembler::udiv_r_r(REG const destReg, REG const firstSrcReg, REG const sec
 void Assembler::rBits_r_r(REG const destReg, REG const srcReg, bool const is64bit) {
   // sf 101 1010 1100 ... Rn Rd
   // 5ac00000 dac00000
-  OPCodeTemplate opcode = is64bit ? 0x5ac00000 : 0xdac00000;
+  OPCodeTemplate opcode = is64bit ? 0xdac00000 : 0x5ac00000;
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
   append(opcode);
@@ -268,7 +268,7 @@ void Assembler::rBits_r_r(REG const destReg, REG const srcReg, bool const is64bi
 void Assembler::clz_r_r(REG const destReg, REG const srcReg, bool const is64bit) {
   // sf 101 1010 1100 0000 0001 00 Rn Rd
   // 5ac01000 dac01000
-  OPCodeTemplate opcode = is64bit ? 0x5ac01000 : 0xdac01000;
+  OPCodeTemplate opcode = is64bit ? 0xdac01000 : 0x5ac01000;
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
   append(opcode);
