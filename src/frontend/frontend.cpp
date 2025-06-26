@@ -708,12 +708,17 @@ void Frontend::parseCodeSection() {
         confirm(stack_.top().isValue() && (!stack_.top().isI64()), "must be i32 value type");
         op.subROP(false);
         as_.ldr_base_off(REG::R9, ROP, 0U, false);
+
+        REG const resultReg = REG::R10;
+        // prepare default not zero, set 0 (if-else downgraded to if)
+        as_.emit_mov_w_imm32(resultReg, 0U);
+
         as_.cmp_r_imm(REG::R9, 0U, false);
         Relpatch const notZero = as_.prepareJmp(CC::NE);
-        as_.emit_mov_w_imm32(REG::R9, 1U); // if zero, set 1
+        // value is zero. Set true
+        as_.emit_mov_w_imm32(resultReg, 1U);
         notZero.linkToHere();
-        as_.emit_mov_w_imm32(REG::R9, 0U); // if not zero, set 0
-        as_.str_base_off(ROP, REG::R9, 0U, false);
+        as_.str_base_off(ROP, resultReg, 0U, false);
         op.addROP(false);
         // don't pop stack, since the eqz result is the same type element
         break;

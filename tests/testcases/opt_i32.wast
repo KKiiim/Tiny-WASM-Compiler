@@ -7,6 +7,7 @@
   (func (export "div_s") (param $x i32) (param $y i32) (result i32) (i32.div_s (local.get $x) (local.get $y)))
   (func (export "div_u") (param $x i32) (param $y i32) (result i32) (i32.div_u (local.get $x) (local.get $y)))
   (func (export "ctz") (param $x i32) (result i32) (i32.ctz (local.get $x)))
+  (func (export "eqz") (param $x i32) (result i32) (i32.eqz (local.get $x)))
 )
 
 (assert_return (invoke "add" (i32.const 1) (i32.const 1)) (i32.const 2))
@@ -80,3 +81,9 @@
 (assert_return (invoke "ctz" (i32.const 0x00010000)) (i32.const 16))
 (assert_return (invoke "ctz" (i32.const 0x80000000)) (i32.const 31))
 (assert_return (invoke "ctz" (i32.const 0x7fffffff)) (i32.const 0))
+
+(assert_return (invoke "eqz" (i32.const 0)) (i32.const 1))
+(assert_return (invoke "eqz" (i32.const 1)) (i32.const 0))
+(assert_return (invoke "eqz" (i32.const 0x80000000)) (i32.const 0))
+(assert_return (invoke "eqz" (i32.const 0x7fffffff)) (i32.const 0))
+(assert_return (invoke "eqz" (i32.const 0xffffffff)) (i32.const 0))
