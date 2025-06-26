@@ -84,7 +84,7 @@ TEST(Chapter07, loop) {
   LOG_YELLOW << ConsoleYellow << "Testing loop.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
     Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName).disassemble();
+    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
 
     LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
     for (const auto &testCase : module.testCases) {
