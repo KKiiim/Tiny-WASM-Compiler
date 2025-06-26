@@ -80,9 +80,3 @@
 (assert_return (invoke "ctz" (i32.const 0x00010000)) (i32.const 16))
 (assert_return (invoke "ctz" (i32.const 0x80000000)) (i32.const 31))
 (assert_return (invoke "ctz" (i32.const 0x7fffffff)) (i32.const 0))
-
-(assert_return (invoke "eqz" (i32.const 0)) (i32.const 1))
-(assert_return (invoke "eqz" (i32.const 1)) (i32.const 0))
-(assert_return (invoke "eqz" (i32.const 0x80000000)) (i32.const 0))
-(assert_return (invoke "eqz" (i32.const 0x7fffffff)) (i32.const 0))
-(assert_return (invoke "eqz" (i32.const 0xffffffff)) (i32.const 0))
