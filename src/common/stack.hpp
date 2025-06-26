@@ -55,6 +55,8 @@ public:
   // Used for relocation patching in cross control flow circumstance
   uint32_t relpatchInsPos = 0;
 
+  bool isLoopBlock = false;
+
 private:
   bool unreachableBlock = false;
 };
