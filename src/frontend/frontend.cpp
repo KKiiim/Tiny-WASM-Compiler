@@ -715,23 +715,28 @@ void Frontend::parseCodeSection() {
         stack_.push(StackElement{ElementType::I32});
         break;
       }
+      case OPCode::I64_EQZ:
       case OPCode::I32_EQZ: {
-        confirm(stack_.top().isValue() && (!stack_.top().isI64()), "must be i32 value type");
-        op.subROP(false);
-        as_.ldr_base_off(REG::R9, ROP, 0U, false);
+        bool const is64bit = (opcode == OPCode::I64_EQZ);
+        confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must match value type");
+        stack_.pop();
+
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
 
         REG const resultReg = REG::R10;
         // prepare default not zero, set 0 (if-else downgraded to if)
         as_.emit_mov_w_imm32(resultReg, 0U);
 
-        as_.cmp_r_imm(REG::R9, 0U, false);
+        as_.cmp_r_imm(REG::R9, 0U, is64bit);
         Relpatch const notZero = as_.prepareJmp(CC::NE);
         // value is zero. Set true
         as_.emit_mov_w_imm32(resultReg, 1U);
         notZero.linkToHere();
         as_.str_base_off(ROP, resultReg, 0U, false);
         op.addROP(false);
-        // don't pop stack, since the eqz result is the same type element
+
+        stack_.push(StackElement{ElementType::I32});
         break;
       }
       case OPCode::UNREACHABLE:
@@ -784,7 +789,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_LE_S:
       case OPCode::I32_GE_S:
       case OPCode::I32_GE_U:
-      case OPCode::I64_EQZ:
       case OPCode::I64_EQ:
       case OPCode::I64_NE:
       case OPCode::I64_LT_S:
