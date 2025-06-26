@@ -693,14 +693,25 @@ void Frontend::parseCodeSection() {
         bool const is64bit = (opcode == OPCode::I64_LE_U);
         StackElement const right = stack_.pop();
         StackElement const left = stack_.pop();
-        op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
         confirm(right.isI64() == is64bit, "must be value type");
         confirm(left.isI64() == is64bit, "must be value type");
+        op.subROP(is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        op.subROP(is64bit);
         as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
 
-        // TODO(): imply
-        //
+        // prepare result as default true, unsigned left <= right
+        REG const resultReg = REG::R11;
+        as_.emit_mov_w_imm32(resultReg, 1U);
+
+        as_.cmp_r_r(REG::R10, REG::R9, is64bit);
+        Relpatch const unsignedLessOrSame = as_.prepareJmp(CC::LS);
+        // not LS(unsigned)
+        as_.emit_mov_w_imm32(resultReg, 0);
+        unsignedLessOrSame.linkToHere();
+        as_.str_base_off(ROP, resultReg, 0U, false);
+        op.addROP(false);
+
         stack_.push(StackElement{ElementType::I32});
         break;
       }
