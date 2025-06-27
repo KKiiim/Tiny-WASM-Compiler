@@ -182,13 +182,7 @@ void Assembler::mov_r_imm16(REG const destReg, uint16_t const imm, bool const is
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
   append(opcode);
 }
-// OPCodeTemplate str_sp_imm(REG const srcReg, uint32_t const spOffsetImm, bool const is64bit) {
-//   OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000; // STR Xn, [SP, #imm] for 64-bit or 32-bit
-//   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 10U);    // source register 10-14
-//   opcode |= (spOffsetImm & 0xFFFU) << 10U;                   // immediate offset 10-21
-//   opcode |= (static_cast<OPCodeTemplate>(REG::SP) << 5U);    // SP register as base, 5-9
-//   append(opcode);
-// }
+
 void Assembler::mul_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
   // sf 001 1011 000 Rm 0111 11 Rn Rd
   // 1b007c00
