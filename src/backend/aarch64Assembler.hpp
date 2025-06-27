@@ -93,8 +93,16 @@ public:
 
   void prepare_b_cond(CC const condition);
   void prepare_b();
+  /// @brief condOffset: offset from the address of this instruction, in the range +/-128MB, is encoded as "imm26" times 4.
+  /// Which means the offset is instruction position offset to output binary.
   void set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const condOffset);
+  /// @brief offset: offset from the address of this instruction, in the range +/-1MB, is encoded as "imm19" times 4.
+  /// Which means the offset is instruction position offset to output binary.
   void set_b_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const offset);
+
+  void prepare_bl();
+  /// @brief offset from the address of this instruction, in the range +/-128MB, is encoded as "imm26" times 4.
+  void set_bl_off(uint32_t const bl_instructionPositionOffsetToOutputBinary, int32_t const offset);
 
   Relpatch prepareJmp(CC const condition);
 

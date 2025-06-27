@@ -19,7 +19,12 @@ public:
 
   ExecutableMemory startCompilation(std::string const &wasmPath);
   void logParsedInfo();
+  inline uintptr_t getFunctionStartAddress(uint32_t const functionIndex) const {
+    return sTable_.get(functionIndex);
+  }
 
+  /// @note This is used to relpatch the branch instructions after all labels are registered
+  /// @note Scope: within the same function
   class LabelManager {
   public:
     explicit LabelManager(Assembler &as) : as_(as) {
@@ -53,6 +58,31 @@ public:
     Assembler &as_;
   };
 
+  class SymbolTable {
+  public:
+    SymbolTable() = default;
+    ~SymbolTable() {
+      setAllSymbols();
+    }
+    SymbolTable(SymbolTable const &) = delete;
+    SymbolTable &operator=(SymbolTable const &) = delete;
+    SymbolTable(SymbolTable &&) = delete;
+    SymbolTable &operator=(SymbolTable &&) = delete;
+
+    inline void addSymbol(uint32_t const functionIndex, uintptr_t const funcStartAddr) {
+      symbols_[functionIndex] = funcStartAddr;
+    }
+    void setAllSymbols();
+    inline uintptr_t get(uint32_t const functionIndex) const {
+      auto const &it = symbols_.find(functionIndex);
+      confirm(it != symbols_.end(), "function index not found in symbol table");
+      return it->second;
+    }
+
+  private:
+    std::unordered_map<uint32_t, uintptr_t> symbols_; ///< functionIndex to funcStart address mapping
+  };
+
 private:
   void validateMagicNumber();
   void validateVersion();
@@ -66,9 +96,9 @@ private:
 
 private:
   ModuleInfo &module_;
-
-private:
   BytecodeReader br_;
+
+  SymbolTable sTable_;
 
 private:
   Assembler as_;
