@@ -45,7 +45,7 @@ uint32_t OP::add(WasmType const localType) {
 
 void OP::get_r_param(uint32_t const paramIndex, bool const is64bit) {
   as_.str_base_off(ROP, static_cast<REG>(paramIndex), 0U, is64bit);
-  as_.add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true);
+  addROP(is64bit);
 }
 void OP::set_r_param(uint32_t const paramIndex, bool const is64bit, bool const isTee = false) {
   subROP(is64bit);
@@ -53,7 +53,7 @@ void OP::set_r_param(uint32_t const paramIndex, bool const is64bit, bool const i
   // TODO(): reduce ins, if tee don't sub sp, can use signed offset load(not support yet)
   if (isTee) {
     // restore the ROP
-    as_.add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true);
+    addROP(is64bit);
   }
 }
 void OP::get_ofsp_local(uint32_t const offset2SP, bool const is64bit) {
@@ -61,7 +61,7 @@ void OP::get_ofsp_local(uint32_t const offset2SP, bool const is64bit) {
   confirm(offset2SP <= MaxPositiveImmForLdrStr, "offset2SP too large");
   as_.ldr_base_off(REG::R9, REG::SP, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit);
   as_.str_base_off(ROP, REG::R9, 0U, is64bit);
-  as_.add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true);
+  addROP(is64bit);
 }
 void OP::set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const isTee = false) {
   // Use R9 as scratch register
@@ -72,6 +72,6 @@ void OP::set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const
   // TODO(): reduce ins, if tee don't sub sp, can use signed offset load(not support yet)
   if (isTee) {
     // restore the ROP
-    as_.add_r_r_imm(ROP, ROP, is64bit ? 8U : 4U, true);
+    addROP(is64bit);
   }
 }

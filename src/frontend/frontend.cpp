@@ -909,13 +909,12 @@ void Frontend::LabelManager::relpatchAllLabels() {
   for (LabelManager::BrInfo const &brInfo : brIfInfos_) {
     uint32_t const branchInsPosOff = brInfo.BrInsStartAddress;
     uint32_t const whereToJump = labels_[brInfo.labelIndex - 1U]; // should -1 as index in vector
+    int32_t const insOffset = static_cast<int32_t>(whereToJump - branchInsPosOff) / 4;
     if (brInfo.isBrIf) {
       // condition jump instruction
-      int32_t const condOffset = static_cast<int32_t>(whereToJump - branchInsPosOff) / 4;
-      as_.set_b_cond_off(branchInsPosOff, condOffset);
+      as_.set_b_cond_off(branchInsPosOff, insOffset);
     } else {
-      int32_t const jumpOffset = static_cast<int32_t>(whereToJump - branchInsPosOff) / 4;
-      as_.set_b_off(branchInsPosOff, jumpOffset);
+      as_.set_b_off(branchInsPosOff, insOffset);
     }
   }
 }

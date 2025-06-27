@@ -182,13 +182,7 @@ void Assembler::mov_r_imm16(REG const destReg, uint16_t const imm, bool const is
   opcode |= (imm & 0xFFFFU) << 5U;                  // immediate value 5-20
   append(opcode);
 }
-// OPCodeTemplate str_sp_imm(REG const srcReg, uint32_t const spOffsetImm, bool const is64bit) {
-//   OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000; // STR Xn, [SP, #imm] for 64-bit or 32-bit
-//   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 10U);    // source register 10-14
-//   opcode |= (spOffsetImm & 0xFFFU) << 10U;                   // immediate offset 10-21
-//   opcode |= (static_cast<OPCodeTemplate>(REG::SP) << 5U);    // SP register as base, 5-9
-//   append(opcode);
-// }
+
 void Assembler::mul_r_r(REG const destReg, REG const firstSrcReg, REG const secondSrcReg, bool const is64bit) {
   // sf 001 1011 000 Rm 0111 11 Rn Rd
   // 1b007c00
@@ -280,15 +274,25 @@ void Assembler::clz_r_r(REG const destReg, REG const srcReg, bool const is64bit)
 
 void Assembler::emit_mov_x_imm64(REG const destReg, uint64_t const imm) {
   mov_r_imm16(destReg, imm & 0xFFFFU, true);
-  movk_r_imm16(destReg, (imm >> 16U) & 0xFFFFU, 1, true);
-  movk_r_imm16(destReg, (imm >> 32U) & 0xFFFFU, 2, true);
-  movk_r_imm16(destReg, (imm >> 48U) & 0xFFFFU, 3, true);
+  uint16_t const shift1 = (imm >> 16U) & 0xFFFFU;
+  if (shift1 != 0) {
+    movk_r_imm16(destReg, shift1, 1, true);
+  }
+  uint16_t const shift2 = (imm >> 32U) & 0xFFFFU;
+  if (shift2 != 0) {
+    movk_r_imm16(destReg, shift2, 2, true);
+  }
+  uint16_t const shift3 = (imm >> 48U) & 0xFFFFU;
+  if (shift3 != 0) {
+    movk_r_imm16(destReg, shift3, 3, true);
+  }
 }
 void Assembler::emit_mov_w_imm32(REG const destReg, uint32_t const imm) {
   mov_r_imm16(destReg, imm & 0xFFFFU, false);
-  if (((imm >> 16U) & 0xFFFFU) != 0U) {
+  uint16_t const shift1 = (imm >> 16U) & 0xFFFFU;
+  if (shift1 != 0U) {
     // If the upper 16 bits are not zero, we need to move them as well
-    movk_r_imm16(destReg, (imm >> 16U) & 0xFFFFU, 1, false);
+    movk_r_imm16(destReg, shift1, 1, false);
   }
 }
 
