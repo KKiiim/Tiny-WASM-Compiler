@@ -25,11 +25,20 @@ void Assembler::str_base_off(REG const addrReg, REG const srcReg, uint32_t const
 
   // 1x 11 1001 00 imm12 Rn Rt
   // F9000000
-  confirm(offset <= 0xFFFU, "Immediate out of range");
   OPCodeTemplate opcode = is64bit ? 0xF9000000 : 0xB9000000;
   opcode |= static_cast<OPCodeTemplate>(srcReg);
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
-  opcode |= (bit_cast<uint32_t>(offset) & 0xFFFU) << 10U;
+  // currently only support positive offset(bytes)
+  uint32_t off = 0U;
+  if (is64bit) {
+    confirm(offset % 8U == 0U, "Immediate offset must be multiple of 8 for 64-bit");
+    off = offset / 8U; // convert to number of 64-bit words
+  } else {
+    confirm(offset % 4U == 0U, "Immediate offset must be multiple of 4 for 32-bit");
+    off = offset / 4U; // convert to number of 32-bit words
+  }
+  confirm(off <= 0xFFFU, "Immediate out of range");
+  opcode |= (off & 0xFFFU) << 10U;
   append(opcode);
 }
 void Assembler::ldr_base_off(REG const destReg, REG const addrReg, uint32_t const offset, bool const is64bit) {
@@ -40,11 +49,20 @@ void Assembler::ldr_base_off(REG const destReg, REG const addrReg, uint32_t cons
 
   // 1x 111001 01 imm12 Rn Rt
   // F9400000 B9400000
-  confirm(offset <= 0xFFFU, "Immediate out of range");
   OPCodeTemplate opcode = is64bit ? 0xF9400000 : 0xB9400000;
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U); // addr 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);         // dest 0-4
-  opcode |= (bit_cast<uint32_t>(offset) & 0xFFFU) << 10U;
+  // currently only support positive offset(bytes)
+  uint32_t off = 0U;
+  if (is64bit) {
+    confirm(offset % 8U == 0U, "Immediate offset must be multiple of 8 for 64-bit");
+    off = offset / 8U; // convert to number of 64-bit words
+  } else {
+    confirm(offset % 4U == 0U, "Immediate offset must be multiple of 4 for 32-bit");
+    off = offset / 4U; // convert to number of 32-bit words
+  }
+  confirm(off <= 0xFFFU, "Immediate out of range");
+  opcode |= (off & 0xFFFU) << 10U;
   append(opcode);
 }
 void Assembler::add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit) {
@@ -224,6 +242,12 @@ void Assembler::prepare_b() {
   constexpr const OPCodeTemplate opcode = 0x14000000;
   append(opcode);
 }
+void Assembler::prepare_bl() {
+  // 100101 imm26
+  // 94000000
+  constexpr const OPCodeTemplate opcode = 0x94000000;
+  append(opcode);
+}
 void Assembler::brk() {
   // 1101 0100 001 imm16 00000
   // d4200000
@@ -306,8 +330,8 @@ void Assembler::decreaseSPWithClean(uint32_t const bytes) {
   // R9 used as scratch register
   mov_r_imm16(REG::R9, 0U, true);
   uint32_t const bytesPerStr = 8U; // 64bits register, 8 bytes per str_base_off
-  for (uint32_t i = 0; i < bytes / 8; ++i) {
-    int32_t const offset = static_cast<int32_t>(i * 8U);
+  for (uint32_t i = 0; i < bytes / bytesPerStr; ++i) {
+    uint32_t const offset = static_cast<uint32_t>(i * 8U);
     str_base_off(REG::SP, REG::R9, offset, true);
   }
 }
@@ -344,6 +368,19 @@ void Assembler::set_b_off(uint32_t const b_instructionPositionOffsetToOutputBina
   opcode |= static_cast<OPCodeTemplate>(offset) & 0x3FFFFFFU;
 
   memcpy(&data_[b_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
+}
+
+void Assembler::set_bl_off(uint32_t const bl_instructionPositionOffsetToOutputBinary, int32_t const offset) {
+  confirm(size_ >= bl_instructionPositionOffsetToOutputBinary + 4U, "must have the bl instruction");
+
+  OPCodeTemplate opcode;
+  memcpy(&opcode, &data_[bl_instructionPositionOffsetToOutputBinary], sizeof(OPCodeTemplate));
+  confirm((opcode & static_cast<OPCodeTemplate>(0x94000000)) == static_cast<OPCodeTemplate>(0x94000000), "");
+  confirm(((offset >= static_cast<int32_t>(-(0x3ffffff + 1))) && (offset <= static_cast<int32_t>(0x3ffffff))),
+          "Offset out of range signed 26 for branch instruction");
+  opcode |= static_cast<OPCodeTemplate>(offset) & 0x3FFFFFFU;
+
+  memcpy(&data_[bl_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
 }
 
 void Assembler::setTrap(uint32_t const trapcode) {

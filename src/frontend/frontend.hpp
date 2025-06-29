@@ -14,12 +14,18 @@
 
 class Frontend {
 public:
-  explicit Frontend(ModuleInfo &module, Stack &stack, OperandStack &operandStack) : module_(module), stack_(stack), operandStack_(operandStack) {
+  explicit Frontend(ModuleInfo &module, Stack &stack, OperandStack &operandStack)
+      : sTable_(as_), module_(module), stack_(stack), operandStack_(operandStack) {
   }
 
   ExecutableMemory startCompilation(std::string const &wasmPath);
   void logParsedInfo();
+  inline uintptr_t getFunctionStartAddress(uint32_t const functionIndex) const {
+    return sTable_.get(functionIndex);
+  }
 
+  /// @note This is used to relpatch the branch instructions after all labels are registered
+  /// @note Scope: within the same function
   class LabelManager {
   public:
     explicit LabelManager(Assembler &as) : as_(as) {
@@ -53,6 +59,31 @@ public:
     Assembler &as_;
   };
 
+  class SymbolTable {
+  public:
+    explicit SymbolTable(Assembler &as) : as_(as) {
+    }
+    inline void addSymbol(uint32_t const functionIndex, uintptr_t const funcStartAddr) {
+      symbols_[functionIndex] = funcStartAddr;
+    }
+    inline void addBl(uint32_t const funcIndex, uintptr_t const blInstructionStartAddr) {
+      blStartAddrs_.emplace_back(funcIndex, blInstructionStartAddr);
+    }
+    inline uintptr_t get(uint32_t const functionIndex) const {
+      auto const &it = symbols_.find(functionIndex);
+      confirm(it != symbols_.end(), "function index not found in symbol table");
+      return it->second;
+    }
+
+    void relpatchAllSymbols(); // Relpatch all bl instructions to the correct function start address
+
+  private:
+    std::unordered_map<uint32_t, uintptr_t> symbols_;          ///< functionIndex to funcStart address mapping
+    std::vector<std::pair<uint32_t, uintptr_t>> blStartAddrs_; ///< functionIndex and bl instruction address
+
+    Assembler &as_;
+  };
+
 private:
   void validateMagicNumber();
   void validateVersion();
@@ -65,14 +96,15 @@ private:
   void compile();
 
 private:
-  ModuleInfo &module_;
+  void emitWasmCall(uint32_t const callFuncIndex);
 
 private:
   BytecodeReader br_;
+  Assembler as_;
+  SymbolTable sTable_;
 
 private:
-  Assembler as_;
-
+  ModuleInfo &module_;
   Stack &stack_;
   OperandStack &operandStack_;
 };

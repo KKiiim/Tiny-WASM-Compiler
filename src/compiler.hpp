@@ -15,15 +15,15 @@ public:
   ExecutableMemory &compile(std::string const &wasmPath);
 
   template <typename T, typename... Args> T singleCallByName(std::string const &funcName, std::string const &signature, Args &&...args) {
-    auto const &funcIdex = module_.exportFuncNameToIndex_.find(funcName);
-    if (funcIdex == module_.exportFuncNameToIndex_.end()) {
+    auto const &funcIndex = module_.exportFuncNameToIndex_.find(funcName);
+    if (funcIndex == module_.exportFuncNameToIndex_.end()) {
       throw std::runtime_error("Function not found: " + funcName);
     }
-    uint32_t const functionIndex = funcIdex->second;
+    uint32_t const functionIndex = funcIndex->second;
     if (!module_.validateSignature(functionIndex, signature)) {
       throw std::runtime_error("Signature validation failed for function: " + funcName);
     }
-    uint32_t const startAddressOffset = module_.functionInfos_[functionIndex].startAddressOffset;
+    uint32_t const startAddressOffset = frontend_.getFunctionStartAddress(functionIndex);
     const uint32_t *const execStart = executableMemory_.data<uint32_t *>();
     const uint32_t *const funcStartAddress = execStart + (startAddressOffset / sizeof(uint32_t));
 

@@ -93,6 +93,20 @@ TEST(Chapter07, loop) {
   }
 }
 
+TEST(Chapter08, call) {
+  JsonReader const jsonReader("tests/testcases/tmp/call.json");
+  LOG_YELLOW << ConsoleYellow << "Testing call.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    Compiler compiler;
+    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
+
+    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
+    for (const auto &testCase : module.testCases) {
+      execTest(testCase, compiler);
+    }
+  }
+}
+
 //////////////////////////////////////////////
 /////////////Optional Spec Test///////////////
 //////////////////////////////////////////////

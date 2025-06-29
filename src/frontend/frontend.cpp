@@ -169,30 +169,6 @@ void Frontend::parseCodeSection() {
 
   // parse each function body
   for (uint32_t currentFuncIndex = 0U; currentFuncIndex < funcNumbers; ++currentFuncIndex) {
-    uint32_t const funcSignatureIndex{module_.func_[currentFuncIndex].signatureIndex};
-    auto const &funcTypeInfo = module_.type_[funcSignatureIndex];
-
-    ModuleInfo::FunctionInfo funcBody{};
-    uint32_t const stackElementIndex = stack_.push(StackElement{ElementType::FUNC_START});
-    funcBody.belongingBlockIndex = stackElementIndex;
-    funcBody.startAddressOffset = as_.getCurrentOffset();
-    funcBody.paramsNumber = funcTypeInfo.params.size();
-    uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
-    funcBody.bodySize = funcBodySize;
-    for (auto const &p : funcTypeInfo.params) {
-      // init params as local
-      funcBody.locals.push_back({true, UINT32_MAX, p});
-    }
-
-    uint32_t const preParseFuncBROffset = br_.getOffset();
-
-    // Parse local type decl(same type local array)
-    // (local i64 i32 i64) -> localDeclCount == 3. i64*1 i32*1 i64*1
-    // (local i64 i32 i32) -> localDeclCount == 2. i64*1 i32*2
-    // params not included
-    uint32_t const localDeclCount = br_.readLEB128<uint32_t>();
-    uint32_t localDeclIndex = 0U;
-
     ////// Temporary variables of CURRENT function
     ///< record local's memory addr offset from SP in this function
     ///< to handle operand variables
@@ -200,6 +176,29 @@ void Frontend::parseCodeSection() {
     OP op{as_};
     LabelManager labelManager{as_};
 
+    uint32_t const funcSignatureIndex{module_.func_[currentFuncIndex].signatureIndex};
+    auto const &funcTypeInfo = module_.type_[funcSignatureIndex];
+
+    ModuleInfo::FunctionInfo funcBody{};
+    uint32_t const stackElementIndex = stack_.push(StackElement{ElementType::FUNC_START});
+    funcBody.belongingBlockIndex = stackElementIndex;
+    uint32_t const funcBodySize = br_.readLEB128<uint32_t>();
+    uint32_t const preParseFuncBROffset = br_.getOffset();
+
+    // Parse local type decl(same type local array)
+    // (local i64 i32 i64) -> localDeclCount == 3. i64*1 i32*1 i64*1
+    // (local i64 i32 i32) -> localDeclCount == 2. i64*1 i32*2
+    // params not included
+    uint32_t const localDeclCount = br_.readLEB128<uint32_t>();
+
+    ///< Prepare locals and params. Calculate each local's offset from SP
+    // Params:
+    // params normally used by register, but store in memory before call
+    for (auto const &param : funcTypeInfo.params) {
+      funcBody.locals.push_back({true, op.add(param), param});
+    }
+    // Other Locals:
+    uint32_t localDeclIndex = 0U;
     while (localDeclIndex++ < localDeclCount) {
       uint32_t const currentTypeLocalCount = br_.readLEB128<uint32_t>();
       WasmType const localType = br_.readByte<WasmType>();
@@ -207,6 +206,13 @@ void Frontend::parseCodeSection() {
         funcBody.locals.push_back({false, op.add(localType), localType});
       }
     }
+
+    sTable_.addSymbol(currentFuncIndex, as_.getCurrentOffset());
+
+    ///////////////////////////////
+    ///< Position Of Function Start
+    ///////////////////////////////
+
     // TODO(): other stack use excluding local
     uint32_t const stackUsage = op.getAlignedSize();
     LOG_DEBUG << "stackUsage = " << stackUsage << LOG_END;
@@ -806,9 +812,52 @@ void Frontend::parseCodeSection() {
         stack_.push(StackElement{ElementType::I32});
         break;
       }
+      case OPCode::CALL: {
+        // save registers(only current function's params need to be saved yet, none-param locals always in memory)
+        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
+          auto const &param = funcBody.locals[i];
+          confirm(param.isParam, "must be param");
+          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
+          as_.str_base_off(REG::SP, static_cast<REG>(i), param.offset, param.type == WasmType::I64);
+        }
+
+        uint32_t const callIndex{br_.readLEB128<uint32_t>()};
+        confirm(callIndex < module_.func_.size(), "function index out of range");
+        auto const &callType = module_.type_[module_.func_[callIndex].signatureIndex];
+        auto const &callParams = callType.params;
+        // validate and prepare call params type
+        confirm(callParams.size() <= 8, "call params size should not exceed 8");
+        for (uint32_t i = 0; i < callParams.size(); ++i) {
+          const uint32_t regIndex = callParams.size() - 1 - i; // params are pushed in reverse order
+          auto const &paramElement = stack_.pop();
+          confirm(paramElement.isI64() == (callParams[regIndex] == WasmType::I64), "Parameter type mismatch");
+          op.subROP(paramElement.isI64());
+          as_.ldr_base_off(static_cast<REG>(regIndex), ROP, 0, paramElement.isI64());
+        }
+
+        emitWasmCall(callIndex);
+
+        // restore result in R0 if has return value
+        if (callType.results.size() == 1U) {
+          bool const is64bit = (callType.results[0] == WasmType::I64);
+          as_.str_base_off(ROP, REG::R0, 0U, is64bit);
+          op.addROP(is64bit);
+          // push the return value type to stack
+          stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
+        }
+
+        // restore current function's params back to registers
+        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
+          auto const &param = funcBody.locals[i];
+          confirm(param.isParam, "must be param");
+          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
+          as_.ldr_base_off(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
+        }
+
+        break;
+      }
       case OPCode::UNREACHABLE:
       case OPCode::BR_TABLE:
-      case OPCode::CALL:
       case OPCode::CALL_INDIRECT:
       case OPCode::REF_NULL:
       case OPCode::REF_IS_NULL:
@@ -896,6 +945,7 @@ void Frontend::parseCodeSection() {
   }
 
   confirm(funcNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");
+  sTable_.relpatchAllSymbols();
 }
 void Frontend::parseNameSection() {
   // uint32_t const stringLength = br_.readLEB128<uint32_t>();
@@ -903,6 +953,17 @@ void Frontend::parseNameSection() {
   // for (uint32_t i = 0; i < stringLength; i++) {
   //   name += static_cast<char>(br_.readByte());
   // }
+}
+
+void Frontend::emitWasmCall(uint32_t const callFuncIndex) {
+  // save current LR
+  as_.str_base_off(REG::SP, REG::LR, 0, true);
+  // emit call
+  uint32_t const positionOfCall = as_.getCurrentOffset();
+  as_.prepare_bl();
+  sTable_.addBl(callFuncIndex, positionOfCall);
+  // restore LR
+  as_.ldr_base_off(REG::LR, REG::SP, 0, true);
 }
 
 void Frontend::LabelManager::relpatchAllLabels() {
@@ -916,6 +977,15 @@ void Frontend::LabelManager::relpatchAllLabels() {
     } else {
       as_.set_b_off(branchInsPosOff, insOffset);
     }
+  }
+}
+
+void Frontend::SymbolTable::relpatchAllSymbols() {
+  for (auto const &blIns : blStartAddrs_) {
+    uint32_t const blInsPosition = blIns.second;
+    uintptr_t const whereToJump = symbols_[blIns.first];
+    int32_t const insOffset = static_cast<int32_t>(whereToJump - blInsPosition) / 4;
+    as_.set_bl_off(blInsPosition, insOffset);
   }
 }
 
@@ -936,9 +1006,8 @@ void Frontend::logParsedInfo() {
   }
   LOG_DEBUG << "========================= code section =========================" << LOG_END;
   LOG_DEBUG << "function number = " << module_.functionInfos_.size() << LOG_END;
-  for (uint32_t i = 0; i < module_.functionInfos_.size(); i++) {
-    LOG_DEBUG << "body[" << i << "] size = " << module_.functionInfos_[i].bodySize << " numLocalDecl = " << module_.functionInfos_[i].locals.size()
-              << LOG_END;
+  for (auto &functionInfo : module_.functionInfos_) {
+    LOG_DEBUG << " numLocalDecl = " << functionInfo.locals.size() << LOG_END;
   }
   LOG_DEBUG << "========================= name section =========================" << LOG_END;
   for (uint32_t i = 0; i < module_.names_.size(); i++) {

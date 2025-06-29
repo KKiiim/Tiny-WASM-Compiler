@@ -36,10 +36,7 @@ public:
     WasmType type;
   };
   struct FunctionInfo {
-    uint32_t bodySize; // does not contain itself
-    uint32_t paramsNumber;
-    std::vector<LocalInfo> locals; // params and locals
-    uint32_t startAddressOffset;   ///< Bytes offset from the start of the executable memory
+    std::vector<LocalInfo> locals; // params, then locals
     uint32_t belongingBlockIndex;  // index of stack element
   };
   struct NameInfo {
