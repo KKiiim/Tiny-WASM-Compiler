@@ -13,3 +13,13 @@
 If args is (iii), x0,x1,x2 will be used as params registers by default. x3 is used as `bl` register.  
 Similarly, if args is () which is empty, x0 will be used as `bl` register.  
 For conform to the calling convention of C/C++, in JIT code get params from C++ function call with register x0-x7 if used.
+
+## Stack layout
+
+```
+=================
+FP
+Params(store before call)
+other locals
+=================
+```

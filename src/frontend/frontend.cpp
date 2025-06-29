@@ -815,20 +815,46 @@ void Frontend::parseCodeSection() {
         break;
       }
       case OPCode::CALL: {
-        uint32_t const funcIndex{br_.readLEB128<uint32_t>()};
-        confirm(funcIndex < module_.functionInfos_.size(), "function index out of range");
-        auto const &funcTypeInfo = module_.type_[module_.func_[funcIndex].signatureIndex];
-
-        auto const &callParams = funcTypeInfo.params;
-        // validate params type
-        for (auto const &p : callParams) {
-          StackElement const &paramElement = stack_.pop();
-          confirm(paramElement.isI64() == (p == WasmType::I64), "call param type should match the validation");
-
-          // save registers(only params currently)
+        // save registers(only current function's params need to be saved yet, none-param locals always in memory)
+        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
+          auto const &param = funcBody.locals[i];
+          confirm(param.isParam, "must be param");
+          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
+          as_.str_base_off(REG::SP, static_cast<REG>(i), param.offset, param.type == WasmType::I64);
         }
 
-        // restore registers
+        uint32_t const callIndex{br_.readLEB128<uint32_t>()};
+        confirm(callIndex < module_.func_.size(), "function index out of range");
+        auto const &callType = module_.type_[module_.func_[callIndex].signatureIndex];
+        auto const &callParams = callType.params;
+        // validate and prepare call params type
+        confirm(callParams.size() <= 8, "call params size should not exceed 8");
+        for (uint32_t i = 0; i < callParams.size(); ++i) {
+          const uint32_t regIndex = callParams.size() - 1 - i; // params are pushed in reverse order
+          auto const &paramElement = stack_.pop();
+          confirm(paramElement.isI64() == (callParams[regIndex] == WasmType::I64), "Parameter type mismatch");
+          op.subROP(paramElement.isI64());
+          as_.ldr_base_off(static_cast<REG>(regIndex), ROP, 0, paramElement.isI64());
+        }
+
+        emitWasmCall(callIndex);
+
+        // restore result in R0 if has return value
+        if (callType.results.size() == 1U) {
+          bool const is64bit = (callType.results[0] == WasmType::I64);
+          as_.str_base_off(ROP, REG::R0, 0U, is64bit);
+          op.addROP(is64bit);
+          // push the return value type to stack
+          stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
+        }
+
+        // restore current function's params back to registers
+        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
+          auto const &param = funcBody.locals[i];
+          confirm(param.isParam, "must be param");
+          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
+          as_.ldr_base_off(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
+        }
 
         break;
       }
@@ -921,6 +947,7 @@ void Frontend::parseCodeSection() {
   }
 
   confirm(funcNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");
+  sTable_.relpatchAllSymbols();
 }
 void Frontend::parseNameSection() {
   // uint32_t const stringLength = br_.readLEB128<uint32_t>();
@@ -928,6 +955,17 @@ void Frontend::parseNameSection() {
   // for (uint32_t i = 0; i < stringLength; i++) {
   //   name += static_cast<char>(br_.readByte());
   // }
+}
+
+void Frontend::emitWasmCall(uint32_t const callFuncIndex) {
+  // save current LR
+  as_.str_base_off(REG::SP, REG::LR, 0, true);
+  // emit call
+  uint32_t const positionOfCall = as_.getCurrentOffset();
+  as_.prepare_bl();
+  sTable_.addBl(callFuncIndex, positionOfCall);
+  // restore LR
+  as_.ldr_base_off(REG::LR, REG::SP, 0, true);
 }
 
 void Frontend::LabelManager::relpatchAllLabels() {
@@ -944,7 +982,13 @@ void Frontend::LabelManager::relpatchAllLabels() {
   }
 }
 
-void Frontend::SymbolTable::setAllSymbols() {
+void Frontend::SymbolTable::relpatchAllSymbols() {
+  for (auto const &blIns : blStartAddrs_) {
+    uint32_t const blInsPosition = blIns.second;
+    uintptr_t const whereToJump = symbols_[blIns.first];
+    int32_t const insOffset = static_cast<int32_t>(whereToJump - blInsPosition) / 4;
+    as_.set_bl_off(blInsPosition, insOffset);
+  }
 }
 
 void Frontend::logParsedInfo() {

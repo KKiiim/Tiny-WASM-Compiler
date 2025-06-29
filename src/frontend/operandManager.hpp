@@ -12,6 +12,7 @@ WasmType toWasmType(ElementType const type);
 class OP {
 public:
   explicit OP(Assembler &as) : size_(0U), as_(as) {
+    size_ += 8U; // prepare for X30(LR)
   }
   /// @brief store i32 and i64
   /// @return record offset in from SP
