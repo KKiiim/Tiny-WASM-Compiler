@@ -15,7 +15,7 @@
 class Frontend {
 public:
   explicit Frontend(ModuleInfo &module, Stack &stack, OperandStack &operandStack)
-      : module_(module), sTable_(as_), stack_(stack), operandStack_(operandStack) {
+      : sTable_(as_), module_(module), stack_(stack), operandStack_(operandStack) {
   }
 
   ExecutableMemory startCompilation(std::string const &wasmPath);
@@ -99,14 +99,12 @@ private:
   void emitWasmCall(uint32_t const callFuncIndex);
 
 private:
-  ModuleInfo &module_;
   BytecodeReader br_;
-
+  Assembler as_;
   SymbolTable sTable_;
 
 private:
-  Assembler as_;
-
+  ModuleInfo &module_;
   Stack &stack_;
   OperandStack &operandStack_;
 };

@@ -1,6 +1,5 @@
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -272,7 +271,6 @@ void Frontend::parseCodeSection() {
         bool const is64bit = (l.type == WasmType::I64);
 
         if (l.isParam) {
-          std::cout << "local.set param idx = " << localIdx << "function params size = " << funcTypeInfo.params.size() << std::endl;
           confirm(localIdx < funcTypeInfo.params.size(), "");
           confirm(l.type == funcTypeInfo.params[localIdx], "");
           op.set_r_param(localIdx, is64bit, opcode == OPCode::LOCAL_TEE);
