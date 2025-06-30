@@ -25,6 +25,8 @@ public:
   std::string getTrapCode() const;
   std::string getTrapMessage() const;
 
+  void initialize();
+
   struct CallReturn {
     bool hasTrapped;
     uint64_t returnValue; // max support 64 bits number

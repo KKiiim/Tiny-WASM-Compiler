@@ -7,6 +7,7 @@
 
 #include "runtime.hpp"
 
+#include "src/backend/aarch64_encoding.hpp"
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/util.hpp"
@@ -52,6 +53,25 @@ void Runtime::unregisterSignalHandler() const {
   if (sigaction(SIGTRAP, &sa, nullptr) == -1) {
     LOG_ERROR << "Failed to register signal handler: " << strerror(errno) << LOG_END;
   }
+}
+
+void Runtime::initialize() {
+  confirm(compiler_.frontend_.codeSectionParsed, "must");
+  Assembler as{}; // temporary emitter
+
+  ///< Init X28 for operandStack
+  as.emit_mov_x_imm64(REG::R28, compiler_.operandStack_.getStartAddr());
+  if (compiler_.module_.hasTable) {
+    ///< Init X27 for funcIndexToSignatureIndex array
+    as.emit_mov_x_imm64(REG::R27, compiler_.funcIndexToSignatureIndex_.getStartAddr());
+    ///< Init X26 for funcIndexToAddress array
+    as.emit_mov_x_imm64(REG::R26, compiler_.funcIndexToAddress_.getStartAddr());
+  }
+  as.ret();
+  ExecutableMemory const exec = as.getExecutableMemory();
+  void (*const init)() = exec.data<void (*)()>();
+  // FIXME: Maybe dangerous, since we don't know what happened between init and first function call
+  init();
 }
 
 std::string Runtime::getTrapCode() const {

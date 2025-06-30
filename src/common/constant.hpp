@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-constexpr const uint32_t DefaultPageSize = static_cast<uint32_t>(1000U) * 2U;
+constexpr const uint32_t DefaultPageSize = 4 * 1024; // 4 KB
 constexpr const uint32_t MaxParamsForWasmFunction = 8U;
 
 enum Trapcode : uint32_t {

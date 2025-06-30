@@ -4,13 +4,16 @@
 #include <string>
 
 #include "src/common/ExecutableMemory.hpp"
-#include "src/common/operand_stack.hpp"
 #include "src/common/stack.hpp"
 #include "src/frontend/frontend.hpp"
+#include "src/frontend/runtimeBlock.hpp"
 
+class Runtime;
 class Compiler final {
+  friend Runtime;
+
 public:
-  explicit Compiler() : frontend_(module_, stack_, operandStack_){};
+  explicit Compiler() : frontend_(module_, stack_, operandStack_, funcIndexToSignatureIndex_){};
 
   ExecutableMemory &compile(std::string const &wasmPath);
 
@@ -29,22 +32,22 @@ public:
 
     using FuncPtr = T (*)(typename std::remove_reference_t<Args>...);
     auto *func = bit_cast<FuncPtr>(funcStartAddress);
-    initOperandStack();
     return func(std::forward<Args>(args)...);
   }
 
 private:
-  void initOperandStack();
-
-private:
-  Stack stack_;               ///< Compiler stack
-  OperandStack operandStack_; ///< JIT runtime stack for simulate WASM operand stack
+  Stack stack_; ///< Compile time stack
 
   ModuleInfo module_;
   Frontend frontend_;
 
 private:
-  ExecutableMemory executableMemory_; ///< Executable memory for compiled code
+  // For runtime
+
+  ExecutableMemory executableMemory_;      ///< Executable memory for compiled code
+  RuntimeBlock operandStack_;              ///< JIT runtime stack for simulate WASM operand stack
+  RuntimeBlock funcIndexToSignatureIndex_; ///< 4 bytes signatureIndex array by function index
+  RuntimeBlock funcIndexToAddress_;        ///< 8 bytes functionStartAddress array by function index
 };
 
 #endif

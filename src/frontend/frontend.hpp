@@ -8,19 +8,20 @@
 #include "src/backend/aarch64Assembler.hpp"
 #include "src/common/ModuleInfo.hpp"
 #include "src/common/logger.hpp"
-#include "src/common/operand_stack.hpp"
 #include "src/common/stack.hpp"
 #include "src/frontend/byteCodeReader.hpp"
+#include "src/frontend/runtimeBlock.hpp"
 
 class Frontend {
 public:
-  explicit Frontend(ModuleInfo &module, Stack &stack, OperandStack &operandStack)
-      : sTable_(as_), module_(module), stack_(stack), operandStack_(operandStack) {
+  explicit Frontend(ModuleInfo &module, Stack &stack, RuntimeBlock &operandStack, RuntimeBlock &funcIndexToSignatureIndex)
+      : sTable_(as_), module_(module), stack_(stack), operandStack_(operandStack), funcIndexToSignatureIndex_(funcIndexToSignatureIndex) {
   }
 
   ExecutableMemory startCompilation(std::string const &wasmPath);
   void logParsedInfo();
   inline uintptr_t getFunctionStartAddress(uint32_t const functionIndex) const {
+    confirm(codeSectionParsed, "must");
     return sTable_.get(functionIndex);
   }
 
@@ -92,11 +93,16 @@ private:
   void parseExportSection();
   void parseCodeSection();
   void parseNameSection();
+  void parseElementSection();
+  void parseTableSection();
 
   void compile();
 
 private:
   void emitWasmCall(uint32_t const callFuncIndex);
+
+public:
+  bool codeSectionParsed = false;
 
 private:
   BytecodeReader br_;
@@ -106,7 +112,8 @@ private:
 private:
   ModuleInfo &module_;
   Stack &stack_;
-  OperandStack &operandStack_;
+  RuntimeBlock &operandStack_;
+  RuntimeBlock &funcIndexToSignatureIndex_;
 };
 
 #endif

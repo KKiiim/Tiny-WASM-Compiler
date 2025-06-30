@@ -18,9 +18,6 @@ public:
     std::vector<WasmType> params;
     std::vector<WasmType> results;
   };
-  struct FuncInfo {
-    uint32_t signatureIndex; ///< Index of the function type this function is conforming to
-  };
   struct ExportInfo {
     std::string exportName;
     WasmImportExportType type;
@@ -47,17 +44,23 @@ public:
   SignatureType wasmType2SignatureType(WasmType const type) const;
   bool validateSignature(uint32_t const functionIndex, std::string const &signature) const;
 
-  // Parsed from code section. functionInfos_[i]: functionIndex i to FunctionInfo
+  // Parsed from code section: functionIndex i to FunctionInfo
   std::vector<FunctionInfo> functionInfos_;
-  // Parsed from type section. type_[i]: signatureIndex i to TypeInfo
-  std::vector<TypeInfo> type_;
-  // Parsed from function section. func_[i]: functionIndex i to signatureIndex(FuncInfo)
-  std::vector<FuncInfo> func_;
+  // Parsed from type section: funcType index to TypeInfo details
+  std::vector<TypeInfo> typeInfo_;
+  // Parsed from function section: functionIndex i to signatureIndex(type index)
+  std::vector<uint32_t> funcIndex2TypeIndex_;
 
   std::vector<ExportInfo> export_;
   std::unordered_map<std::string, uint32_t> exportFuncNameToIndex_;
 
   std::vector<NameInfo> names_;
+
+  // table
+  bool hasTable = false;
+  bool tableHasSizeLimit = false;
+  uint32_t tableInitialSize{};
+  uint32_t tableMaximumSize{};
 };
 
 #endif

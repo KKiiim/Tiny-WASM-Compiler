@@ -20,8 +20,8 @@ SignatureType ModuleInfo::wasmType2SignatureType(WasmType const type) const {
 }
 
 bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string const &signature) const {
-  uint32_t const signatureIndex = func_[functionIndex].signatureIndex;
-  auto const &funcTypeInfo = type_[signatureIndex];
+  uint32_t const signatureIndex = funcIndex2TypeIndex_[functionIndex];
+  auto const &funcTypeInfo = typeInfo_[signatureIndex];
   confirm(signature.size() >= 2U, "signature must have at least 2 characters '(' and ')'");
   confirm(((funcTypeInfo.results.size() + funcTypeInfo.params.size()) == (signature.size() - 2U)),
           "Signature should match the number of parameters in the function type");

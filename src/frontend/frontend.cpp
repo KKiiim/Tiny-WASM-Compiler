@@ -40,7 +40,7 @@ ExecutableMemory Frontend::startCompilation(std::string const &wasmPath) {
       parseFunctionSection();
       break;
     case SectionType::TABLE:
-      throw std::runtime_error("SectionType::TABLE unsupported");
+      parseTableSection();
       break;
     case SectionType::MEMORY:
       throw std::runtime_error("SectionType::MEMORY unsupported");
@@ -130,7 +130,7 @@ void Frontend::parseTypeSection() {
     confirm(resultNum == resultInfos.size(), "must");
     confirm(resultInfos.size() <= 1U, "only one result supported");
 
-    module_.type_.push_back({paramInfos, resultInfos});
+    module_.typeInfo_.push_back({paramInfos, resultInfos});
   }
 }
 void Frontend::parseFunctionSection() {
@@ -140,7 +140,49 @@ void Frontend::parseFunctionSection() {
     counter++;
 
     uint32_t const index = br_.readLEB128<uint32_t>();
-    module_.func_.push_back({index});
+    module_.funcIndex2TypeIndex_.push_back({index});
+  }
+}
+void Frontend::parseTableSection() {
+  uint32_t const tableNumbers{br_.readLEB128<uint32_t>()};
+  confirm(tableNumbers == 1U, "so far, even spec only support one table");
+  WasmType const elementType{br_.readByte<WasmType>()};
+  confirm(elementType == WasmType::FUNC_REF, "only tableType funcref allowed");
+  module_.hasTable = true;
+
+  uint8_t const hasSizeLimit{br_.readByte<uint8_t>()};
+  // hasSizeLimit flag is only allowed to be 0 = false or 1 = true
+  confirm((hasSizeLimit == 0U || hasSizeLimit == 1U), "Unknown size limit flag");
+  // Convert to bool
+  module_.tableHasSizeLimit = hasSizeLimit != 0U;
+  module_.tableInitialSize = br_.readLEB128<uint32_t>();
+
+  if (module_.tableHasSizeLimit) {
+    module_.tableMaximumSize = br_.readLEB128<uint32_t>();
+    confirm(module_.tableInitialSize <= module_.tableMaximumSize, "Maximum_table_size_smaller_than_initial_table_size");
+
+    confirm(module_.tableInitialSize == module_.tableMaximumSize, "current implementation only supports all initial");
+  }
+}
+void Frontend::parseElementSection() {
+  uint32_t const numElementSegments{br_.readLEB128<uint32_t>()};
+  confirm(numElementSegments == 1U, "Number of table segments only support 1");
+  enum class ElementMode : uint8_t { LegacyIndex, PassiveIndex, ActiveIndex, DeclaredIndex, LegacyExpr, PassiveExpr, ActiveExpr, DeclaredExpr };
+  ElementMode const mode{static_cast<ElementMode>(br_.readLEB128<uint32_t>())};
+  confirm(mode == ElementMode::LegacyIndex, "Bulk_memory_operations_feature_not_implemented");
+  confirm(module_.hasTable, "must has table if has element section");
+
+  confirm(br_.readByte<OPCode>() == OPCode::I32_CONST, "only support i32 offset yet");
+  confirm(br_.readLEB128<uint32_t>() == 0U, "only support 0 offset yet");
+  confirm(br_.readByte<OPCode>() == OPCode::END, "must be END");
+
+  // Number of actual table elements (function pointers/references)
+  uint32_t const numElements{br_.readLEB128<uint32_t>()};
+  confirm(numElements <= module_.tableInitialSize, "Table_element_index_out_of_range__initial_table_size_");
+  for (uint32_t j{0U}; j < numElements; j++) {
+    uint32_t const elementFunctionIndex{br_.readLEB128<uint32_t>()};
+    confirm(elementFunctionIndex < module_.funcIndex2TypeIndex_.size(), "Function_index_out_of_range");
+    funcIndexToSignatureIndex_.set(elementFunctionIndex); // offset assumed and only supported zero yet
   }
 }
 void Frontend::parseExportSection() {
@@ -176,8 +218,8 @@ void Frontend::parseCodeSection() {
     OP op{as_};
     LabelManager labelManager{as_};
 
-    uint32_t const funcSignatureIndex{module_.func_[currentFuncIndex].signatureIndex};
-    auto const &funcTypeInfo = module_.type_[funcSignatureIndex];
+    uint32_t const funcSignatureIndex{module_.funcIndex2TypeIndex_[currentFuncIndex]};
+    auto const &funcTypeInfo = module_.typeInfo_[funcSignatureIndex];
 
     ModuleInfo::FunctionInfo funcBody{};
     uint32_t const stackElementIndex = stack_.push(StackElement{ElementType::FUNC_START});
@@ -822,8 +864,8 @@ void Frontend::parseCodeSection() {
         }
 
         uint32_t const callIndex{br_.readLEB128<uint32_t>()};
-        confirm(callIndex < module_.func_.size(), "function index out of range");
-        auto const &callType = module_.type_[module_.func_[callIndex].signatureIndex];
+        confirm(callIndex < module_.funcIndex2TypeIndex_.size(), "function index out of range");
+        auto const &callType = module_.typeInfo_[module_.funcIndex2TypeIndex_[callIndex]];
         auto const &callParams = callType.params;
         // validate and prepare call params type
         confirm(callParams.size() <= 8, "call params size should not exceed 8");
@@ -856,9 +898,11 @@ void Frontend::parseCodeSection() {
 
         break;
       }
+      case OPCode::CALL_INDIRECT: {
+        break;
+      }
       case OPCode::UNREACHABLE:
       case OPCode::BR_TABLE:
-      case OPCode::CALL_INDIRECT:
       case OPCode::REF_NULL:
       case OPCode::REF_IS_NULL:
       case OPCode::REF_FUNC:
@@ -945,6 +989,8 @@ void Frontend::parseCodeSection() {
   }
 
   confirm(funcNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");
+  confirm(codeSectionParsed == false, "");
+  codeSectionParsed = true;
   sTable_.relpatchAllSymbols();
 }
 void Frontend::parseNameSection() {
@@ -990,14 +1036,15 @@ void Frontend::SymbolTable::relpatchAllSymbols() {
 }
 
 void Frontend::logParsedInfo() {
+  confirm(codeSectionParsed, "must");
   LOG_DEBUG << "========================= type section =========================" << LOG_END;
-  for (uint32_t i = 0; i < module_.type_.size(); i++) {
-    LOG_DEBUG << "type[" << i << "] params num = " << module_.type_[i].params.size() << " result num = " << module_.type_[i].results.size()
+  for (uint32_t i = 0; i < module_.typeInfo_.size(); i++) {
+    LOG_DEBUG << "type[" << i << "] params num = " << module_.typeInfo_[i].params.size() << " result num = " << module_.typeInfo_[i].results.size()
               << LOG_END;
   }
   LOG_DEBUG << "========================= func section =========================" << LOG_END;
-  for (uint32_t i = 0; i < module_.func_.size(); i++) {
-    LOG_DEBUG << "func[" << i << "] signatureIndex = " << module_.func_[i].signatureIndex << LOG_END;
+  for (uint32_t i = 0; i < module_.funcIndex2TypeIndex_.size(); i++) {
+    LOG_DEBUG << "func[" << i << "] signatureIndex = " << module_.funcIndex2TypeIndex_[i] << LOG_END;
   }
   LOG_DEBUG << "========================= export section =========================" << LOG_END;
   for (uint32_t i = 0; i < module_.export_.size(); i++) {
