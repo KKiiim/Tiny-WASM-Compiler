@@ -182,6 +182,7 @@ void Frontend::parseElementSection() {
   for (uint32_t j{0U}; j < numElements; j++) {
     uint32_t const elementFunctionIndex{br_.readLEB128<uint32_t>()};
     confirm(elementFunctionIndex < module_.funcIndex2TypeIndex_.size(), "Function_index_out_of_range");
+    // fix: should convert to pure signature index
     funcIndexToSignatureIndex_.set(elementFunctionIndex); // offset assumed and only supported zero yet
   }
 }
@@ -899,6 +900,11 @@ void Frontend::parseCodeSection() {
         break;
       }
       case OPCode::CALL_INDIRECT: {
+        // Pop the table index from the stack
+        StackElement const tableIndex = stack_.pop();
+        confirm(!tableIndex.isI64(), "table index must be an i32");
+
+        // call
         break;
       }
       case OPCode::UNREACHABLE:

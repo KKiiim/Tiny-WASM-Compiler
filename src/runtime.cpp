@@ -64,8 +64,8 @@ void Runtime::initialize() {
   if (compiler_.module_.hasTable) {
     ///< Init X27 for funcIndexToSignatureIndex array
     as.emit_mov_x_imm64(REG::R27, compiler_.funcIndexToSignatureIndex_.getStartAddr());
-    ///< Init X26 for funcIndexToAddress array
-    as.emit_mov_x_imm64(REG::R26, compiler_.funcIndexToAddress_.getStartAddr());
+    ///< Init X26 for funcIndex to jit code start offset array
+    as.emit_mov_x_imm64(REG::R26, compiler_.funcIndexToCodeStartOffset_.getStartAddr());
   }
   as.ret();
   ExecutableMemory const exec = as.getExecutableMemory();

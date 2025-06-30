@@ -36,6 +36,9 @@ public:
   }
 
 private:
+  void prepareFuncIndexToAddress(); // initialize funcIndexToCodeStartOffset_ with function start address
+
+private:
   Stack stack_; ///< Compile time stack
 
   ModuleInfo module_;
@@ -44,10 +47,10 @@ private:
 private:
   // For runtime
 
-  ExecutableMemory executableMemory_;      ///< Executable memory for compiled code
-  RuntimeBlock operandStack_;              ///< JIT runtime stack for simulate WASM operand stack
-  RuntimeBlock funcIndexToSignatureIndex_; ///< 4 bytes signatureIndex array by function index
-  RuntimeBlock funcIndexToAddress_;        ///< 8 bytes functionStartAddress array by function index
+  ExecutableMemory executableMemory_;       ///< Executable memory for compiled code
+  RuntimeBlock operandStack_;               ///< JIT runtime stack for simulate WASM operand stack
+  RuntimeBlock funcIndexToSignatureIndex_;  ///< 4 bytes signatureIndex array by function index
+  RuntimeBlock funcIndexToCodeStartOffset_; ///< 4 bytes offset to code start array by function index
 };
 
 #endif

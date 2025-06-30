@@ -20,7 +20,7 @@ public:
 
   ExecutableMemory startCompilation(std::string const &wasmPath);
   void logParsedInfo();
-  inline uintptr_t getFunctionStartAddress(uint32_t const functionIndex) const {
+  inline uint32_t getFunctionStartAddress(uint32_t const functionIndex) const {
     confirm(codeSectionParsed, "must");
     return sTable_.get(functionIndex);
   }
@@ -64,13 +64,13 @@ public:
   public:
     explicit SymbolTable(Assembler &as) : as_(as) {
     }
-    inline void addSymbol(uint32_t const functionIndex, uintptr_t const funcStartAddr) {
-      symbols_[functionIndex] = funcStartAddr;
+    inline void addSymbol(uint32_t const functionIndex, uint32_t const toCodeStartOffset) {
+      symbols_[functionIndex] = toCodeStartOffset;
     }
-    inline void addBl(uint32_t const funcIndex, uintptr_t const blInstructionStartAddr) {
+    inline void addBl(uint32_t const funcIndex, uint32_t const blInstructionStartAddr) {
       blStartAddrs_.emplace_back(funcIndex, blInstructionStartAddr);
     }
-    inline uintptr_t get(uint32_t const functionIndex) const {
+    inline uint32_t get(uint32_t const functionIndex) const {
       auto const &it = symbols_.find(functionIndex);
       confirm(it != symbols_.end(), "function index not found in symbol table");
       return it->second;
@@ -79,8 +79,8 @@ public:
     void relpatchAllSymbols(); // Relpatch all bl instructions to the correct function start address
 
   private:
-    std::unordered_map<uint32_t, uintptr_t> symbols_;          ///< functionIndex to funcStart address mapping
-    std::vector<std::pair<uint32_t, uintptr_t>> blStartAddrs_; ///< functionIndex and bl instruction address
+    std::unordered_map<uint32_t, uint32_t> symbols_;          ///< functionIndex to jit code start offset mapping
+    std::vector<std::pair<uint32_t, uint32_t>> blStartAddrs_; ///< functionIndex and bl instruction to jit code start offset
 
     Assembler &as_;
   };
