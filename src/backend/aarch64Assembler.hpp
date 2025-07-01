@@ -7,7 +7,7 @@
 #include "aarch64_encoding.hpp"
 
 #include "src/common/ExecutableMemory.hpp"
-#include "src/common/wasm_type.hpp"
+#include "src/common/constant.hpp"
 
 ///
 /// @brief Basic template for AArch64 OPCodes
@@ -20,17 +20,16 @@ uint8_t constexpr const MaxPositiveImmForLdrStr = 0xFFU;
 class Relpatch;
 class Assembler {
 public:
-  Assembler();
-  ~Assembler();
-
-  Assembler(Assembler const &) = delete;
-  Assembler &operator=(Assembler const &) = delete;
-  Assembler(Assembler &&) = delete;
-  Assembler &operator=(Assembler &&) = delete;
-
-  ExecutableMemory getExecutableMemory();
+  Assembler() : outputBinary_(DefaultPageSize) {
+  }
+  inline ExecutableMemory &getExecutableMemory() {
+    return outputBinary_;
+  }
   uint32_t getCurrentOffset() const {
-    return size_;
+    return outputBinary_.getSize();
+  }
+  uintptr_t getCurrentAbsAddress() const {
+    return outputBinary_.getCurrentAbsAddress();
   }
 
   /////////////////////////////////////////////////////////////////
@@ -40,6 +39,8 @@ public:
   void ret();
   /// @brief LDR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
   void ldr_base_off(REG const destReg, REG const addrReg, uint32_t const offset, bool const is64bit);
+  /// default shift 2 for 32bits(offset times 4), shift 3 for 64bits(offset times 8)
+  void ldr_offReg(REG const destReg, REG const addrReg, REG const offsetReg, bool const is64bit);
   /// @brief STR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
   void str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit);
   /// @brief ADD R[d], R[s], imm
@@ -60,7 +61,7 @@ public:
   /// @brief Decrement SP by imm
   void dec_sp(uint32_t const imm);
   /// @brief MOV R[d], R[s]
-  void mov_r_r(REG const destReg, REG const srcReg);
+  void mov_r_r(REG const destReg, REG const srcReg, bool const is64bit);
   /// @brief MOV R[d], imm. Can shift and not keep, but not supported yet
   void mov_r_imm16(REG const destReg, uint16_t const imm, bool const is64bit);
   ///@brief MOVK R[d], imm, shift. K means keeping other bits unchanged
@@ -80,6 +81,10 @@ public:
   void rBits_r_r(REG const destReg, REG const srcReg, bool const is64bit);
   /// @brief Count leading zeros in a register
   void clz_r_r(REG const destReg, REG const srcReg, bool const is64bit);
+
+  void lsr_imm(REG const destReg, REG const srcReg, uint32_t const shift, bool const is64bit);
+
+  void blr(REG const srcReg);
 
   /////////////////////////////////////////////////////////////////
   //< Customized instructions
@@ -110,8 +115,7 @@ private:
   void append(OPCodeTemplate const ins);
 
 private:
-  uint8_t *data_;
-  uint32_t size_;
+  ExecutableMemory outputBinary_;
 };
 
 #endif // SRC_BACKEND_AARCH64ASSEMBLER_H

@@ -8,25 +8,27 @@
 #include "src/backend/aarch64Assembler.hpp"
 #include "src/common/ModuleInfo.hpp"
 #include "src/common/logger.hpp"
-#include "src/common/operand_stack.hpp"
 #include "src/common/stack.hpp"
+#include "src/common/storage.hpp"
 #include "src/frontend/byteCodeReader.hpp"
+#include "src/frontend/operandManager.hpp"
+#include "src/frontend/runtimeBlock.hpp"
 
 class Frontend {
 public:
-  explicit Frontend(ModuleInfo &module, Stack &stack, OperandStack &operandStack)
-      : sTable_(as_), module_(module), stack_(stack), operandStack_(operandStack) {
+  explicit Frontend(ModuleInfo &module, Stack &stack) : sTable_(as_), module_(module), stack_(stack) {
   }
 
-  ExecutableMemory startCompilation(std::string const &wasmPath);
+  ExecutableMemory &startCompilation(std::string const &wasmPath);
   void logParsedInfo();
   inline uintptr_t getFunctionStartAddress(uint32_t const functionIndex) const {
+    confirm(codeSectionParsed, "must");
     return sTable_.get(functionIndex);
   }
 
   /// @note This is used to relpatch the branch instructions after all labels are registered
   /// @note Scope: within the same function
-  class LabelManager {
+  class LabelManager final {
   public:
     explicit LabelManager(Assembler &as) : as_(as) {
     }
@@ -59,27 +61,29 @@ public:
     Assembler &as_;
   };
 
-  class SymbolTable {
+  class SymbolTable final {
   public:
     explicit SymbolTable(Assembler &as) : as_(as) {
     }
-    inline void addSymbol(uint32_t const functionIndex, uintptr_t const funcStartAddr) {
-      symbols_[functionIndex] = funcStartAddr;
-    }
-    inline void addBl(uint32_t const funcIndex, uintptr_t const blInstructionStartAddr) {
-      blStartAddrs_.emplace_back(funcIndex, blInstructionStartAddr);
-    }
-    inline uintptr_t get(uint32_t const functionIndex) const {
-      auto const &it = symbols_.find(functionIndex);
-      confirm(it != symbols_.end(), "function index not found in symbol table");
-      return it->second;
+    inline void addSymbol(uint32_t const functionIndex, uintptr_t const funcAbsAddress) {
+      static_assert(sizeof(uintptr_t) == 8U, "must");
+      LOG_DEBUG << "addSymbol: functionIndex=" << functionIndex << ", funcAbsAddress=" << std::hex << static_cast<uint64_t>(funcAbsAddress)
+                << LOG_END;
+      funcStartAbsAddressArray.set(functionIndex, funcAbsAddress);
     }
 
-    void relpatchAllSymbols(); // Relpatch all bl instructions to the correct function start address
+    // must used after code section parsed
+    inline uintptr_t get(uint32_t const functionIndex) const {
+      LOG_DEBUG << "get: functionIndex=" << functionIndex << ", funcAbsAddress=" << std::hex
+                << static_cast<uint64_t>(funcStartAbsAddressArray.get<uintptr_t>(functionIndex)) << LOG_END;
+      return funcStartAbsAddressArray.get<uintptr_t>(functionIndex);
+    }
+    inline uint64_t getTableStartAddress() const {
+      return funcStartAbsAddressArray.getStartAddr();
+    }
 
   private:
-    std::unordered_map<uint32_t, uintptr_t> symbols_;          ///< functionIndex to funcStart address mapping
-    std::vector<std::pair<uint32_t, uintptr_t>> blStartAddrs_; ///< functionIndex and bl instruction address
+    RuntimeBlock funcStartAbsAddressArray; ///< 8bytes array by function index to function abs address
 
     Assembler &as_;
   };
@@ -92,21 +96,27 @@ private:
   void parseExportSection();
   void parseCodeSection();
   void parseNameSection();
+  void parseElementSection();
+  void parseTableSection();
 
   void compile();
 
 private:
-  void emitWasmCall(uint32_t const callFuncIndex);
+  void emitWasmCall(Storage const callFuncIndex);
+  void prepareCallParams(uint32_t const funcSignatureIndex, OP &op);
+
+public:
+  SymbolTable sTable_;
+  bool codeSectionParsed = false;
+  std::vector<uint32_t> elementIndexToFunctionIndex;
 
 private:
   BytecodeReader br_;
   Assembler as_;
-  SymbolTable sTable_;
 
 private:
   ModuleInfo &module_;
   Stack &stack_;
-  OperandStack &operandStack_;
 };
 
 #endif

@@ -10,7 +10,7 @@
 
 namespace spec {
 
-void execTest(TestCase const &testCase, Compiler &compiler) {
+void execTest(TestCase const &testCase, Runtime &runtime) {
   confirm(((testCase.commandType == Type::assert_return) || (testCase.commandType == Type::assert_trap)), "not supported command type");
   confirm(testCase.action.actionType == Type::invoke, "Expected action type to be invoke");
 
@@ -18,8 +18,6 @@ void execTest(TestCase const &testCase, Compiler &compiler) {
   std::array<uint64_t, MaxParamsForWasmFunction> params{0, 0, 0, 0, 0, 0, 0, 0};
   testCase.setParams(params);
   auto const &signature = testCase.getSignature();
-
-  Runtime runtime{compiler};
 
   // TODO(): compare the trap message and the assert_trap text
   Runtime::CallReturn ret{};
@@ -52,6 +50,18 @@ void execTest(TestCase const &testCase, Compiler &compiler) {
     LOG_INFO << "Exception: " << runtime.getTrapMessage() << LOG_END;
   }
   LOG_GREEN << "Test case passed: " << testCase.action.functionName << " with signature: " << signature << LOG_END;
+}
+
+void execTestModule(TestModule const &module) {
+  Compiler compiler;
+  compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
+  Runtime runtime{compiler};
+  runtime.initialize();
+
+  LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
+  for (const auto &testCase : module.testCases) {
+    execTest(testCase, runtime);
+  }
 }
 
 } // namespace spec

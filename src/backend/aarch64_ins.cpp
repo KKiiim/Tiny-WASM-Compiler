@@ -65,6 +65,17 @@ void Assembler::ldr_base_off(REG const destReg, REG const addrReg, uint32_t cons
   opcode |= (off & 0xFFFU) << 10U;
   append(opcode);
 }
+void Assembler::ldr_offReg(REG const destReg, REG const addrReg, REG const offsetReg, bool const is64bit) {
+  // size(1 x) 11 1000 011 Rm option(3) S(1) 10 Rn Rt
+  // 1011 1000 011 Rm 010(UXTW) 1(S) 10 Rn Rt
+  // B8604C00
+
+  OPCodeTemplate opcode = is64bit ? 0xF8604C00 : 0xB8604C00;
+  opcode |= (static_cast<OPCodeTemplate>(offsetReg) << 16U);
+  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
+  opcode |= static_cast<OPCodeTemplate>(destReg);
+  append(opcode);
+}
 void Assembler::add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit) {
   // sf 0 0 100010 sh imm12 Rn Rd
   // 0001 0001 00 imm12 00000 00000
@@ -154,13 +165,12 @@ void Assembler::inc_sp(uint32_t const imm) {
 void Assembler::dec_sp(uint32_t const imm) {
   return sub_r_r_imm(REG::SP, REG::SP, imm, true);
 }
-void Assembler::mov_r_r(REG const destReg, REG const srcReg) {
-  confirm(false, "not implemented");
-
-  // OPCodeTemplate opcode = is64bit ? 0xAA0003E0 : 0x2A0003E0;
-  OPCodeTemplate opcode = 0x2A0003E0;                    // MOV Xd, Xn
-  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
-  opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
+void Assembler::mov_r_r(REG const destReg, REG const srcReg, bool const is64bit) {
+  // sf 010 1010 000 Rm 000000 11111 Rd
+  // 2A0003E0
+  OPCodeTemplate opcode = is64bit ? 0xAA0003E0 : 0x2A0003E0;
+  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 16U);
+  opcode |= static_cast<OPCodeTemplate>(destReg);
   append(opcode);
 }
 void Assembler::movk_r_imm16(REG const destReg, uint16_t const imm, uint8_t const shift, bool const is64bit) {
@@ -292,6 +302,26 @@ void Assembler::clz_r_r(REG const destReg, REG const srcReg, bool const is64bit)
   append(opcode);
 }
 
+void Assembler::lsr_imm(REG const destReg, REG const srcReg, uint32_t const shift, bool const is64bit) {
+  // sf 101 0011 0 N immr(6) x11111 Rn Rd
+  // 1101 0011 01 immr(6) 111111 Rn Rd -> D340FC00 for 64bits
+  // 0101 0011 00 immr(6) 011111 Rn Rd -> 53007C00 for 32bits
+  confirm(shift <= (is64bit ? 63U : 31U), "Shift out of range");
+  OPCodeTemplate opcode = is64bit ? 0xD340FC00 : 0x53007C00;
+  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);        // dest 0-4
+  opcode |= (shift & 0x3FU) << 16U;
+  append(opcode);
+}
+
+void Assembler::blr(REG const srcReg) {
+  // 1101 0110 0011 1111 0000 00 Rn 00000
+  // D63F0000
+  OPCodeTemplate opcode = 0xD63F0000;                    // BLR Xn
+  opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U); // source 5-9
+  append(opcode);
+}
+
 /////////////////////////////////////////////////////////////////
 //< Customized instructions
 /////////////////////////////////////////////////////////////////
@@ -337,10 +367,9 @@ void Assembler::decreaseSPWithClean(uint32_t const bytes) {
 }
 
 void Assembler::set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const condOffset) {
-  confirm(size_ >= b_instructionPositionOffsetToOutputBinary + 4U, "must have the b instruction");
+  confirm(outputBinary_.getSize() >= b_instructionPositionOffsetToOutputBinary + 4U, "must have the b instruction");
 
-  OPCodeTemplate opcode;
-  memcpy(&opcode, &data_[b_instructionPositionOffsetToOutputBinary], sizeof(OPCodeTemplate));
+  OPCodeTemplate opcode = outputBinary_.get<OPCodeTemplate>(b_instructionPositionOffsetToOutputBinary);
   // TODO(): Currently, only support b.cond
   confirm((opcode & static_cast<OPCodeTemplate>(0x54000000)) == static_cast<OPCodeTemplate>(0x54000000), "");
 
@@ -350,14 +379,12 @@ void Assembler::set_b_cond_off(uint32_t const b_instructionPositionOffsetToOutpu
           "Offset out of range signed 19 for branch instruction");
   opcode |= (static_cast<OPCodeTemplate>(condOffset) & 0x7FFFFU) << 5U; // offset 5-24
 
-  memcpy(&data_[b_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
+  outputBinary_.set(b_instructionPositionOffsetToOutputBinary, opcode);
 }
 
 void Assembler::set_b_off(uint32_t const b_instructionPositionOffsetToOutputBinary, int32_t const offset) {
-  confirm(size_ >= b_instructionPositionOffsetToOutputBinary + 4U, "must have the b instruction");
-
-  OPCodeTemplate opcode;
-  memcpy(&opcode, &data_[b_instructionPositionOffsetToOutputBinary], sizeof(OPCodeTemplate));
+  confirm(outputBinary_.getSize() >= b_instructionPositionOffsetToOutputBinary + 4U, "must have the b instruction");
+  OPCodeTemplate opcode = outputBinary_.get<OPCodeTemplate>(b_instructionPositionOffsetToOutputBinary);
   // TODO(): Currently, only support b
   confirm((opcode & static_cast<OPCodeTemplate>(0x14000000)) == static_cast<OPCodeTemplate>(0x14000000), "");
 
@@ -367,20 +394,18 @@ void Assembler::set_b_off(uint32_t const b_instructionPositionOffsetToOutputBina
           "Offset out of range signed 26 for branch instruction");
   opcode |= static_cast<OPCodeTemplate>(offset) & 0x3FFFFFFU;
 
-  memcpy(&data_[b_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
+  outputBinary_.set(b_instructionPositionOffsetToOutputBinary, opcode);
 }
 
 void Assembler::set_bl_off(uint32_t const bl_instructionPositionOffsetToOutputBinary, int32_t const offset) {
-  confirm(size_ >= bl_instructionPositionOffsetToOutputBinary + 4U, "must have the bl instruction");
-
-  OPCodeTemplate opcode;
-  memcpy(&opcode, &data_[bl_instructionPositionOffsetToOutputBinary], sizeof(OPCodeTemplate));
+  confirm(outputBinary_.getSize() >= bl_instructionPositionOffsetToOutputBinary + 4U, "must have the bl instruction");
+  OPCodeTemplate opcode = outputBinary_.get<OPCodeTemplate>(bl_instructionPositionOffsetToOutputBinary);
   confirm((opcode & static_cast<OPCodeTemplate>(0x94000000)) == static_cast<OPCodeTemplate>(0x94000000), "");
   confirm(((offset >= static_cast<int32_t>(-(0x3ffffff + 1))) && (offset <= static_cast<int32_t>(0x3ffffff))),
           "Offset out of range signed 26 for branch instruction");
   opcode |= static_cast<OPCodeTemplate>(offset) & 0x3FFFFFFU;
 
-  memcpy(&data_[bl_instructionPositionOffsetToOutputBinary], &opcode, sizeof(OPCodeTemplate));
+  outputBinary_.set(bl_instructionPositionOffsetToOutputBinary, opcode);
 }
 
 void Assembler::setTrap(uint32_t const trapcode) {

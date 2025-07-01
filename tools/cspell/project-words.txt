@@ -25,3 +25,5 @@ movk
 MOVK
 pimm
 relpatch
+UXTW
+immr

@@ -10,8 +10,7 @@
 
 static constexpr size_t PAGE_SIZE = 4096;
 
-ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
-  rawSize_ = size;
+ExecutableMemory::ExecutableMemory(uint32_t size) {
   if (size == 0U) {
     throw std::runtime_error("empty ExecutableMemory");
   }
@@ -25,17 +24,16 @@ ExecutableMemory::ExecutableMemory(uint8_t *data, uint32_t size) {
   if (bit_cast<uintptr_t>(mem_) % 4 != 0) {
     throw std::runtime_error("Memory is not 4-byte aligned");
   }
-  LOG_DEBUG << "mmap address: " << std::hex << bit_cast<uintptr_t>(mem_) << std::dec << LOG_END;
+  LOG_DEBUG << "mmap ExecutableMemory from: " << std::hex << bit_cast<uintptr_t>(mem_) << " to "
+            << bit_cast<uintptr_t>(&static_cast<uint8_t *>(mem_)[alignedSize_]) << std::dec << LOG_END;
 
-  std::memcpy(mem_, data, size);
-  // uint8_t *const fillNOPStart = static_cast<uint8_t *>(mem_) + size;
-  // FIXME(): fill with arm64 NOP
-  // std::memset(fillNOPStart, nop, alignedSize_ - size);
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   __builtin___clear_cache(reinterpret_cast<char *>(mem_), reinterpret_cast<char *>(mem_) + alignedSize_);
 }
 
 ExecutableMemory::~ExecutableMemory() {
+  LOG_DEBUG << "unmap ExecutableMemory from: " << std::hex << bit_cast<uintptr_t>(mem_) << " to "
+            << bit_cast<uintptr_t>(&static_cast<uint8_t *>(mem_)[alignedSize_]) << std::dec << LOG_END;
   if (mem_ != MAP_FAILED) {
     munmap(mem_, alignedSize_);
   }
@@ -53,7 +51,7 @@ void ExecutableMemory::disassemble() const {
   cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_OFF);
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_OFF);
 
-  size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(mem_), rawSize_, 0, 0, &insn);
+  size_t const count = cs_disasm(handle, bit_cast<const uint8_t *>(mem_), pos_, 0, 0, &insn);
 
   if (count <= 0) {
     LOG_ERROR << "disassemble failed" << LOG_END;
@@ -73,27 +71,4 @@ void ExecutableMemory::disassemble() const {
 
   cs_free(insn, count);
   cs_close(&handle);
-}
-
-ExecutableMemory::ExecutableMemory(ExecutableMemory &&other) noexcept : mem_(other.mem_), alignedSize_(other.alignedSize_), rawSize_(other.rawSize_) {
-  other.mem_ = nullptr;
-  other.alignedSize_ = 0;
-  other.rawSize_ = 0;
-}
-
-ExecutableMemory &ExecutableMemory::operator=(ExecutableMemory &&other) noexcept {
-  if (this != &other) {
-    if (mem_ != nullptr) {
-      munmap(mem_, alignedSize_);
-    }
-
-    mem_ = other.mem_;
-    alignedSize_ = other.alignedSize_;
-    rawSize_ = other.rawSize_;
-
-    other.mem_ = nullptr;
-    other.alignedSize_ = 0;
-    other.rawSize_ = 0;
-  }
-  return *this;
 }
