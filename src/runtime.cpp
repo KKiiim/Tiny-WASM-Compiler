@@ -7,6 +7,7 @@
 
 #include "runtime.hpp"
 
+#include "src/backend/aarch64_encoding.hpp"
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/util.hpp"
@@ -54,6 +55,23 @@ void Runtime::unregisterSignalHandler() const {
   }
 }
 
+void Runtime::initialize() {
+  confirm(compiler_.frontend_.codeSectionParsed, "must");
+  Assembler as{}; // temporary emitter
+
+  ///< Init X28 for operandStack
+  as.emit_mov_x_imm64(REG::R28, compiler_.operandStack_.getStartAddr());
+  if (compiler_.module_.hasTable) {
+    ///< Init X27 for table start by element index
+    as.emit_mov_x_imm64(REG::R27, compiler_.frontend_.sTable_.getTableStartAddress());
+  }
+  as.ret();
+  ExecutableMemory const &exec = as.getExecutableMemory();
+  void (*const init)() = exec.data<void (*)()>();
+  // FIXME: Maybe dangerous, since we don't know what happened between init and first function call
+  init();
+}
+
 std::string Runtime::getTrapCode() const {
   Trapcode const trapcode = static_cast<Trapcode>(globalTrapcode);
   if (trapcode == Trapcode::NONE) {
@@ -67,9 +85,11 @@ std::string Runtime::getTrapCode() const {
 }
 std::string Runtime::getTrapMessage() const {
   static const std::vector<std::string> trapMessages = {
-      "No error",         // Trapcode 0, invalid trap code
-      "Division by zero", // Trapcode 1
-      "Integer overflow", // Trapcode 2
+      "No error",                    // Trapcode 0, invalid trap code
+      "Division by zero",            // Trapcode 1
+      "Integer overflow",            // Trapcode 2
+      "undefined element",           // Trapcode 3
+      "indirect call type mismatch", // Trapcode 4
   };
   return trapMessages[globalTrapcode];
 }

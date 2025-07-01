@@ -7,6 +7,7 @@
 #include <string>
 #include <type_traits>
 
+#include "src/backend/aarch64Assembler.hpp"
 #include "src/common/logger.hpp"
 #include "src/compiler.hpp"
 
@@ -24,6 +25,8 @@ public:
 
   std::string getTrapCode() const;
   std::string getTrapMessage() const;
+
+  void initialize();
 
   struct CallReturn {
     bool hasTrapped;

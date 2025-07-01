@@ -5,7 +5,6 @@
 #include "tests/json2testcase.hpp"
 
 #include "src/common/logger.hpp"
-#include "src/compiler.hpp"
 
 using namespace spec;
 
@@ -13,13 +12,7 @@ TEST(Chapter02, local) {
   JsonReader const jsonReader("tests/testcases/tmp/local.json");
   LOG_YELLOW << "Testing local.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
@@ -27,13 +20,7 @@ TEST(Chapter03, arithmetic) {
   JsonReader const jsonReader("tests/testcases/tmp/arithmetic.json");
   LOG_YELLOW << ConsoleYellow << "Testing arithmetic.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
@@ -41,13 +28,7 @@ TEST(Chapter04, if_) {
   JsonReader const jsonReader("tests/testcases/tmp/if.json");
   LOG_YELLOW << ConsoleYellow << "Testing if.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
@@ -55,13 +36,7 @@ TEST(Chapter05, div) {
   JsonReader const jsonReader("tests/testcases/tmp/div.json");
   LOG_YELLOW << ConsoleYellow << "Testing div.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
@@ -69,13 +44,7 @@ TEST(Chapter06, block) {
   JsonReader const jsonReader("tests/testcases/tmp/block.json");
   LOG_YELLOW << ConsoleYellow << "Testing block.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
@@ -83,13 +52,7 @@ TEST(Chapter07, loop) {
   JsonReader const jsonReader("tests/testcases/tmp/loop.json");
   LOG_YELLOW << ConsoleYellow << "Testing loop.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
@@ -97,13 +60,7 @@ TEST(Chapter08, call) {
   JsonReader const jsonReader("tests/testcases/tmp/call.json");
   LOG_YELLOW << ConsoleYellow << "Testing call.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
@@ -114,26 +71,14 @@ TEST(OptTest, i32) {
   JsonReader const jsonReader("tests/testcases/tmp/opt_i32.json");
   LOG_YELLOW << ConsoleYellow << "Testing opt_i32.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 TEST(OptTest, i64) {
   JsonReader const jsonReader("tests/testcases/tmp/opt_i64.json");
   LOG_YELLOW << ConsoleYellow << "Testing opt_i64.json" << LOG_END;
   for (const auto &module : jsonReader.modules_) {
-    Compiler compiler;
-    compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
-
-    LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
-    for (const auto &testCase : module.testCases) {
-      execTest(testCase, compiler);
-    }
+    execTestModule(module);
   }
 }
 
