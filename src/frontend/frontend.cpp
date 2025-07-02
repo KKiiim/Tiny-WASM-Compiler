@@ -49,7 +49,7 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
       throw std::runtime_error("SectionType::MEMORY unsupported");
       break;
     case SectionType::GLOBAL:
-      throw std::runtime_error("SectionType::GLOBAL unsupported");
+      parseGlobalSection();
       break;
     case SectionType::EXPORT:
       parseExportSection();
@@ -103,6 +103,39 @@ void Frontend::validateVersion() {
 
   if (moduleWasmVersion != supportedWasmVersion) {
     throw std::runtime_error("Wasm_Version_not_supported");
+  }
+}
+void Frontend::parseGlobalSection() {
+  uint32_t const globalNumbers{br_.readLEB128<uint32_t>()};
+
+  uint32_t globalOffset = 0U; // used for mutable globals
+  for (uint32_t i = 0U; i < globalNumbers; ++i) {
+    WasmType const type = br_.readByte<WasmType>();
+    confirm((type == WasmType::I64 || type == WasmType::I32), "only i64 and i32 global supported");
+    bool const is64bit = (type == WasmType::I64);
+
+    ModuleInfo::GlobalInfo globalInfo{};
+    globalInfo.isMutable = br_.readByte<uint8_t>() == 1U;
+    globalInfo.is64bit = is64bit;
+    OPCode const dataType = br_.readByte<OPCode>();
+    confirm((((dataType == OPCode::I32_CONST) && (!is64bit)) || ((dataType == OPCode::I64_CONST) && is64bit)), "global type and init value mismatch");
+
+    if (globalInfo.isMutable) {
+      globalInfo.offset = globalOffset;
+      globalOffset += is64bit ? 8U : 4U;
+    }
+
+    if (is64bit) {
+      ConstUnion data{};
+      data.u64 = bit_cast<uint64_t>(br_.readLEB128<int64_t>());
+      globalInfo.value = data;
+    } else {
+      ConstUnion data{};
+      data.u32 = bit_cast<uint32_t>(br_.readLEB128<int32_t>());
+      globalInfo.value = data;
+    }
+    confirm(br_.readByte<OPCode>() == OPCode::END, "global declaration must end with END");
+    module_.globalManager.push_back(globalInfo);
   }
 }
 void Frontend::parseTypeSection() {
@@ -949,6 +982,28 @@ void Frontend::parseCodeSection() {
 
         break;
       }
+      case OPCode::GLOBAL_GET: {
+        uint32_t const globalIndex{br_.readLEB128<uint32_t>()};
+        confirm(globalIndex < module_.globalManager.size(), "global index out of range");
+        auto const &globalInfo = module_.globalManager[globalIndex];
+        // need handle alignment for ldr and str with offset 8/4
+        as_.ldr_base_off(REG::R9, GLOBAL, globalInfo.offset, globalInfo.is64bit);
+        as_.str_base_off(ROP, REG::R9, 0U, globalInfo.is64bit);
+        op.addROP(globalInfo.is64bit);
+        stack_.push(StackElement{globalInfo.is64bit ? ElementType::I64 : ElementType::I32});
+        break;
+      }
+      case OPCode::GLOBAL_SET: {
+        uint32_t const globalIndex{br_.readLEB128<uint32_t>()};
+        confirm(globalIndex < module_.globalManager.size(), "global index out of range");
+        auto const &globalInfo = module_.globalManager[globalIndex];
+        confirm(globalInfo.isMutable, "global set must be mutable");
+        confirm(stack_.pop().isI64() == globalInfo.is64bit, "global set value type should match the global type");
+        op.subROP(globalInfo.is64bit);
+        as_.ldr_base_off(REG::R9, ROP, 0U, globalInfo.is64bit);
+        as_.str_base_off(GLOBAL, REG::R9, globalInfo.offset, globalInfo.is64bit);
+        break;
+      }
       case OPCode::UNREACHABLE:
       case OPCode::BR_TABLE:
       case OPCode::REF_NULL:
@@ -956,8 +1011,6 @@ void Frontend::parseCodeSection() {
       case OPCode::REF_FUNC:
       case OPCode::SELECT:
       case OPCode::SELECT_T:
-      case OPCode::GLOBAL_GET:
-      case OPCode::GLOBAL_SET:
       case OPCode::TABLE_GET:
       case OPCode::TABLE_SET:
       case OPCode::I32_LOAD:

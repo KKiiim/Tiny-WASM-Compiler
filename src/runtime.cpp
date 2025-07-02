@@ -59,7 +59,9 @@ void Runtime::initialize() {
   Assembler as{}; // temporary emitter
 
   ///< Init X28 for operandStack
-  as.emit_mov_x_imm64(REG::R28, operandStack_.getStartAddr());
+  as.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
+  ///< Init X27 for global memory
+  as.emit_mov_x_imm64(GLOBAL, globalMemory.getStartAddr());
   as.ret();
   ExecutableMemory const &exec = as.getExecutableMemory();
   void (*const init)() = exec.data<void (*)()>();

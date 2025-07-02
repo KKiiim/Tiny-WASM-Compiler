@@ -71,6 +71,7 @@ private:
   void parseNameSection();
   void parseElementSection();
   void parseTableSection();
+  void parseGlobalSection();
 
   void compile();
 

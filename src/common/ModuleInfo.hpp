@@ -8,6 +8,8 @@
 
 #include "wasm_type.hpp"
 
+#include "src/common/util.hpp"
+
 enum class SignatureType : uint8_t { I32 = 'i', I64 = 'I', F32 = 'f', F64 = 'F', PARAMSTART = '(', PARAMEND = ')' };
 
 class ModuleInfo final {
@@ -58,13 +60,14 @@ public:
 
   std::vector<NameInfo> names_;
 
-  // table
+  ///< Table
   bool hasTable = false;
   bool tableHasSizeLimit = false;
   uint32_t numberElements{};
   uint32_t tableInitialSize{};
   uint32_t tableMaximumSize{};
 
+  ///< Call
   /// @brief 1-1 Map from string view function signature to pure signature index
   class SignatureMap {
   public:
@@ -78,6 +81,15 @@ public:
   };
 
   SignatureMap signatureStringToPureSigIndex; // 1-1 mapping
+
+  ///< Global
+  struct GlobalInfo {
+    bool is64bit;
+    uint32_t offset; ///< Offset in global memory. Invalid if not mutable
+    bool isMutable;
+    ConstUnion value; // if mutable, this is always the initial value
+  };
+  std::vector<GlobalInfo> globalManager; ///< Global info by global index
 };
 
 #endif

@@ -71,6 +71,13 @@ TEST(Chapter09, call_indirect) {
     execTestModule(module);
   }
 }
+TEST(Chapter10, global) {
+  JsonReader const jsonReader("tests/testcases/tmp/global.json");
+  LOG_YELLOW << ConsoleYellow << "Testing global.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
 
 //////////////////////////////////////////////
 /////////////Optional Spec Test///////////////
