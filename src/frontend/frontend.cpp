@@ -241,7 +241,7 @@ void Frontend::parseCodeSection() {
     OP op{as_};
     LabelManager labelManager{as_};
 
-    auto const &funcTypeInfo = module_.getTypeInfo(currentFuncIndex);
+    auto const &currentFuncTypeInfo = module_.getTypeInfo(currentFuncIndex);
 
     ModuleInfo::FunctionInfo funcBody{};
     uint32_t const stackElementIndex = stack_.push(StackElement{ElementType::FUNC_START});
@@ -258,7 +258,7 @@ void Frontend::parseCodeSection() {
     ///< Prepare locals and params. Calculate each local's offset from SP
     // Params:
     // params normally used by register, but store in memory before call
-    for (auto const &param : funcTypeInfo.params) {
+    for (auto const &param : currentFuncTypeInfo.params) {
       funcBody.locals.push_back({true, op.add(param), param});
     }
     // Other Locals:
@@ -275,7 +275,7 @@ void Frontend::parseCodeSection() {
     ///< Position Of Function Start
     ///////////////////////////////
 
-    sTable_.addSymbol(currentFuncIndex, as_.getCurrentAbsAddress());
+    funcAddrTable.set(currentFuncIndex, as_.getCurrentAbsAddress());
 
     // TODO(): other stack use excluding local
     uint32_t const stackUsage = op.getAlignedSize();
@@ -292,13 +292,13 @@ void Frontend::parseCodeSection() {
         break; ///< NOP, do nothing
       }
       case OPCode::RETURN: {
-        if (funcTypeInfo.results.size() == 1U) {
+        if (currentFuncTypeInfo.results.size() == 1U) {
           // function with return value
           confirm(stack_.top().isValue(), "should at least have one value element for return value");
           StackElement const retValue = stack_.top();
-          confirm(toWasmType(retValue.elementType_) == funcTypeInfo.results[0], "validation stack top should be the return value type");
+          confirm(toWasmType(retValue.elementType_) == currentFuncTypeInfo.results[0], "validation stack top should be the return value type");
 
-          bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
+          bool const is64bit = currentFuncTypeInfo.results[0] == WasmType::I64;
           // prepare return value
           op.subROP(is64bit);
           as_.ldr_base_off(REG::R0, REG::R28, 0U, is64bit);
@@ -318,7 +318,7 @@ void Frontend::parseCodeSection() {
         stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
         if (l.isParam) {
           // param in register. Assumed params <= 8
-          confirm(localIdx < funcTypeInfo.params.size(), "");
+          confirm(localIdx < currentFuncTypeInfo.params.size(), "");
           op.get_r_param(localIdx, is64bit);
         } else {
           // local
@@ -335,8 +335,8 @@ void Frontend::parseCodeSection() {
         bool const is64bit = (l.type == WasmType::I64);
 
         if (l.isParam) {
-          confirm(localIdx < funcTypeInfo.params.size(), "");
-          confirm(l.type == funcTypeInfo.params[localIdx], "");
+          confirm(localIdx < currentFuncTypeInfo.params.size(), "");
+          confirm(l.type == currentFuncTypeInfo.params[localIdx], "");
           op.set_r_param(localIdx, is64bit, opcode == OPCode::LOCAL_TEE);
         } else {
           uint32_t const offset2SP = l.offset;
@@ -442,18 +442,18 @@ void Frontend::parseCodeSection() {
         switch (lastControlFlowElement.elementType_) {
         case ElementType::FUNC_START: {
           confirm(br_.getOffset() == (preParseFuncBROffset + funcBodySize), "");
-          if (funcTypeInfo.results.size() == 1U) {
+          if (currentFuncTypeInfo.results.size() == 1U) {
             // function with return value
             confirm(stack_.top().isValue(), "should at least have one value element for return value");
             StackElement const retValue = stack_.pop();
-            confirm(toWasmType(retValue.elementType_) == funcTypeInfo.results[0], "validation stack top should be the return value type");
+            confirm(toWasmType(retValue.elementType_) == currentFuncTypeInfo.results[0], "validation stack top should be the return value type");
 
             ///< Function may have other values in stack, it's valid. Use the last value as return value
             stack_.popToLastControlFlowElement(); // including pop FUNC_START
             // FIXME(#59): should else pop redundant value in runtime operand stack
             stack_.push(retValue);
 
-            bool const is64bit = funcTypeInfo.results[0] == WasmType::I64;
+            bool const is64bit = currentFuncTypeInfo.results[0] == WasmType::I64;
             // prepare return value
             op.subROP(is64bit);
             as_.ldr_base_off(REG::R0, REG::R28, 0U, is64bit);
@@ -878,10 +878,10 @@ void Frontend::parseCodeSection() {
       }
       case OPCode::CALL: {
         // save registers(only current function's params need to be saved yet, none-param locals always in memory)
-        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
+        for (uint32_t i = 0U; i < currentFuncTypeInfo.params.size(); i++) {
           auto const &param = funcBody.locals[i];
           confirm(param.isParam, "must be param");
-          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
+          confirm(param.type == currentFuncTypeInfo.params[i], "param type should match the validation");
           as_.str_base_off(REG::SP, static_cast<REG>(i), param.offset, param.type == WasmType::I64);
         }
 
@@ -893,23 +893,8 @@ void Frontend::parseCodeSection() {
 
         Storage const callIndexStorage{ConstUnion{callIndex}};
         emitWasmCall(callIndexStorage);
-
-        // restore result in R0 if has return value
-        if (callType.results.size() == 1U) {
-          bool const is64bit = (callType.results[0] == WasmType::I64);
-          as_.str_base_off(ROP, REG::R0, 0U, is64bit);
-          op.addROP(is64bit);
-          // push the return value type to stack
-          stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
-        }
-
-        // restore current function's params back to registers
-        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
-          auto const &param = funcBody.locals[i];
-          confirm(param.isParam, "must be param");
-          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
-          as_.ldr_base_off(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
-        }
+        handleReturnValue(callType, op);
+        recoveryCurrentFrameReg(funcBody, currentFuncTypeInfo);
 
         break;
       }
@@ -959,23 +944,9 @@ void Frontend::parseCodeSection() {
         Storage const functionIndexRegStorage{REG{functionIndex}};
         // emitWasmCall will use R9 R10 as scratch registers, functionIndexRegStorage as the param should avoid using R9 or R10
         emitWasmCall(functionIndexRegStorage);
+        handleReturnValue(callType, op);
+        recoveryCurrentFrameReg(funcBody, currentFuncTypeInfo);
 
-        // restore result in R0 if has return value
-        if (callType.results.size() == 1U) {
-          bool const is64bit = (callType.results[0] == WasmType::I64);
-          as_.str_base_off(ROP, REG::R0, 0U, is64bit);
-          op.addROP(is64bit);
-          // push the return value type to stack
-          stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
-        }
-
-        // restore current function's params back to registers
-        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
-          auto const &param = funcBody.locals[i];
-          confirm(param.isParam, "must be param");
-          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
-          as_.ldr_base_off(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
-        }
         break;
       }
       case OPCode::UNREACHABLE:
@@ -1094,7 +1065,7 @@ void Frontend::emitWasmCall(Storage const callFuncIndex) {
 
   // emit call
   // use R10 as scratch register for function pointer. R9 is used for function table base address
-  as_.emit_mov_x_imm64(REG::R9, sTable_.getTableStartAddress());
+  as_.emit_mov_x_imm64(REG::R9, funcAddrTable.getStartAddr());
   if (callFuncIndex.type_ == StorageType::REGISTER) {
     // offset reg will times 8
     as_.ldr_offReg(REG::R10, REG::R9, callFuncIndex.location_.reg, true);
@@ -1108,6 +1079,25 @@ void Frontend::emitWasmCall(Storage const callFuncIndex) {
 
   // restore LR
   as_.ldr_base_off(REG::LR, REG::SP, 0, true);
+}
+void Frontend::recoveryCurrentFrameReg(ModuleInfo::FunctionInfo const &funcBody, ModuleInfo::TypeInfo const &funcType) {
+  // restore current function's params back to registers
+  for (uint32_t i = 0U; i < funcType.params.size(); i++) {
+    auto const &param = funcBody.locals[i];
+    confirm(param.isParam, "must be param");
+    confirm(param.type == funcType.params[i], "param type should match the validation");
+    as_.ldr_base_off(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
+  }
+}
+void Frontend::handleReturnValue(ModuleInfo::TypeInfo const &funcType, OP &op) {
+  // restore result in R0 if has return value
+  if (funcType.results.size() == 1U) {
+    bool const is64bit = (funcType.results[0] == WasmType::I64);
+    as_.str_base_off(ROP, REG::R0, 0U, is64bit);
+    op.addROP(is64bit);
+    // push the return value type to stack
+    stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
+  }
 }
 
 void Frontend::LabelManager::relpatchAllLabels() {
@@ -1126,7 +1116,7 @@ void Frontend::LabelManager::relpatchAllLabels() {
 
 void Frontend::makeElementIndexToPureSignatureIndex() {
   for (uint32_t elementIndex = 0U; elementIndex < module_.numberElements; elementIndex++) {
-    uint32_t const functionIndex = elementIndexToFunctionIndex.get<uint32_t>(elementIndex);
+    uint32_t const functionIndex = elementIndexToFunctionIndex.get(elementIndex);
     std::string const &currentSignatureString = module_.getTypeInfo(functionIndex).signature;
     LOG_DEBUG << "elementIndex[" << elementIndex << "]funcIndex[" << functionIndex << "] sig.size=" << currentSignatureString.size() << ":"
               << currentSignatureString << LOG_END;

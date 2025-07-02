@@ -2,7 +2,6 @@
 #define TESTS_JSON2TESTCASE_HPP
 
 #include <cstdint>
-#include <fstream>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>

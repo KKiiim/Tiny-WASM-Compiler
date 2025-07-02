@@ -16,14 +16,14 @@
 
 class Frontend {
 public:
-  explicit Frontend(ModuleInfo &module, Stack &stack) : sTable_(as_), module_(module), stack_(stack) {
+  explicit Frontend(ModuleInfo &module, Stack &stack) : module_(module), stack_(stack) {
   }
 
   ExecutableMemory &startCompilation(std::string const &wasmPath);
   void logParsedInfo();
   inline uintptr_t getFunctionStartAddress(uint32_t const functionIndex) const {
     confirm(codeSectionParsed, "must");
-    return sTable_.get(functionIndex);
+    return funcAddrTable.get(functionIndex);
   }
 
   /// @note This is used to relpatch the branch instructions after all labels are registered
@@ -61,33 +61,6 @@ public:
     Assembler &as_;
   };
 
-  class SymbolTable final {
-  public:
-    explicit SymbolTable(Assembler &as) : as_(as) {
-    }
-    inline void addSymbol(uint32_t const functionIndex, uintptr_t const funcAbsAddress) {
-      static_assert(sizeof(uintptr_t) == 8U, "must");
-      LOG_DEBUG << "addSymbol: functionIndex=" << functionIndex << ", funcAbsAddress=" << std::hex << static_cast<uint64_t>(funcAbsAddress)
-                << LOG_END;
-      funcStartAbsAddressArray.set(functionIndex, funcAbsAddress);
-    }
-
-    // must used after code section parsed
-    inline uintptr_t get(uint32_t const functionIndex) const {
-      LOG_DEBUG << "get: functionIndex=" << functionIndex << ", funcAbsAddress=" << std::hex
-                << static_cast<uint64_t>(funcStartAbsAddressArray.get<uintptr_t>(functionIndex)) << LOG_END;
-      return funcStartAbsAddressArray.get<uintptr_t>(functionIndex);
-    }
-    inline uint64_t getTableStartAddress() const {
-      return funcStartAbsAddressArray.getStartAddr();
-    }
-
-  private:
-    RuntimeBlock funcStartAbsAddressArray; ///< 8bytes array by function index to function abs address
-
-    Assembler &as_;
-  };
-
 private:
   void validateMagicNumber();
   void validateVersion();
@@ -104,15 +77,18 @@ private:
 private:
   void emitWasmCall(Storage const callFuncIndex);
   void prepareCallParams(ModuleInfo::TypeInfo const &callType, OP &op);
+  void recoveryCurrentFrameReg(ModuleInfo::FunctionInfo const &funcBody, ModuleInfo::TypeInfo const &funcType);
+  void handleReturnValue(ModuleInfo::TypeInfo const &funcType, OP &op);
 
   void makeElementIndexToPureSignatureIndex();
 
 public:
-  SymbolTable sTable_;
   bool codeSectionParsed = false;
 
-  RuntimeBlock elementIndexToFunctionIndex;      ///< 4bytes array by element index to function index
-  RuntimeBlock elementIndexToPureSignatureIndex; ///< 4bytes array by element index to pure function signature index
+  static_assert(8U == sizeof(uintptr_t), "");
+  RuntimeBlock<uintptr_t> funcAddrTable;                   ///< 8bytes array by function index to function abs address
+  RuntimeBlock<uint32_t> elementIndexToFunctionIndex;      ///< 4bytes array by element index to function index
+  RuntimeBlock<uint32_t> elementIndexToPureSignatureIndex; ///< 4bytes array by element index to pure function signature index
 
 private:
   BytecodeReader br_;

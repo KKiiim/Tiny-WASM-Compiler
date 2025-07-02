@@ -56,15 +56,10 @@ void Runtime::unregisterSignalHandler() const {
 }
 
 void Runtime::initialize() {
-  confirm(compiler_.frontend_.codeSectionParsed, "must");
   Assembler as{}; // temporary emitter
 
   ///< Init X28 for operandStack
-  as.emit_mov_x_imm64(REG::R28, compiler_.operandStack_.getStartAddr());
-  if (compiler_.module_.hasTable) {
-    ///< Init X27 for table start by element index
-    as.emit_mov_x_imm64(REG::R27, compiler_.frontend_.sTable_.getTableStartAddress());
-  }
+  as.emit_mov_x_imm64(REG::R28, operandStack_.getStartAddr());
   as.ret();
   ExecutableMemory const &exec = as.getExecutableMemory();
   void (*const init)() = exec.data<void (*)()>();
