@@ -1,10 +1,11 @@
+#include <cstdint>
 #include <stdexcept>
 
 #include "ModuleInfo.hpp"
 
 #include "src/common/logger.hpp"
 
-SignatureType ModuleInfo::wasmType2SignatureType(WasmType const type) const {
+SignatureType ModuleInfo::wasmType2SignatureType(WasmType const type) {
   switch (type) {
   case WasmType::I32:
     return SignatureType::I32;
@@ -48,4 +49,19 @@ bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string con
   }
   confirm(static_cast<SignatureType>(signature[sigIndex]) == SignatureType::PARAMEND, "Signature should end with ')' after parameters");
   return true;
+}
+void ModuleInfo::setPureSignatureIndex(std::string const &signatureString) {
+  if (signatureStringToPureSigIndex.find(signatureString) == signatureStringToPureSigIndex.end()) {
+    // set new
+    uint32_t const pureSignatureIndex = signatureStringToPureSigIndex.size();
+    signatureStringToPureSigIndex[signatureString] = pureSignatureIndex;
+    LOG_DEBUG << "New pure signature index: " << pureSignatureIndex << " for signature: " << signatureString << LOG_END;
+  }
+}
+uint32_t ModuleInfo::getPureSignatureIndex(std::string const &signatureString) const {
+  LOG_DEBUG << "Get pure signature index for signature: " << signatureString << LOG_END;
+  if (signatureStringToPureSigIndex.find(signatureString) == signatureStringToPureSigIndex.end()) {
+    throw std::runtime_error("Signature string not found in pure signature index map");
+  }
+  return signatureStringToPureSigIndex.at(signatureString);
 }

@@ -9,6 +9,7 @@
 
 #include "src/backend/aarch64_encoding.hpp"
 #include "src/backend/relpatch.hpp"
+#include "src/common/ModuleInfo.hpp"
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/stack.hpp"
@@ -57,7 +58,7 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
       throw std::runtime_error("SectionType::START unsupported");
       break;
     case SectionType::ELEMENT:
-      throw std::runtime_error("SectionType::ELEMENT unsupported");
+      parseElementSection();
       break;
     case SectionType::CODE:
       parseCodeSection();
@@ -79,7 +80,9 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
   }
   LOG_DEBUG << "parse wasm success" << LOG_END;
 
-  // logParsedInfo();
+  if (module_.hasTable) {
+    makeElementIndexToPureSignatureIndex();
+  }
 
   return as_.getExecutableMemory();
 }
@@ -117,22 +120,36 @@ void Frontend::parseTypeSection() {
     std::vector<WasmType> paramInfos{};
     std::vector<WasmType> resultInfos{};
 
+    std::string params{"("};
     uint32_t const paramsNum = br_.readLEB128<uint32_t>();
     uint32_t paramIndex = 0U;
     while (paramIndex++ < paramsNum) {
-      paramInfos.push_back(br_.readByte<WasmType>());
+      WasmType const pType = br_.readByte<WasmType>();
+      paramInfos.push_back(pType);
+      params.push_back(static_cast<char>(ModuleInfo::wasmType2SignatureType(pType)));
     }
     confirm(paramsNum == paramInfos.size(), "must");
+    params.push_back(')'); // end of params
+
+    std::string signature{};
 
     uint32_t const resultNum = br_.readLEB128<uint32_t>();
     uint32_t resultIndex = 0U;
     while (resultIndex++ < resultNum) {
-      resultInfos.push_back(br_.readByte<WasmType>());
+      WasmType const rType = br_.readByte<WasmType>();
+      resultInfos.push_back(rType);
+      signature.push_back(static_cast<char>(ModuleInfo::wasmType2SignatureType(rType)));
     }
+    confirm(signature.size() <= 1U, "only one result supported");
     confirm(resultNum == resultInfos.size(), "must");
     confirm(resultInfos.size() <= 1U, "only one result supported");
 
-    module_.typeInfo_.push_back({paramInfos, resultInfos});
+    signature += params;
+
+    module_.typeInfo_.push_back({paramInfos, resultInfos, signature});
+
+    // Check whether a previous signature matched. Needed for indirect calls to matching signatures with different indices
+    module_.setPureSignatureIndex(signature);
   }
 }
 void Frontend::parseFunctionSection() {
@@ -185,8 +202,8 @@ void Frontend::parseElementSection() {
   for (uint32_t elementIndex = 0U; elementIndex < module_.numberElements; elementIndex++) {
     uint32_t const functionIndex{br_.readLEB128<uint32_t>()};
     confirm(functionIndex < module_.funcIndex2TypeIndex_.size(), "Function_index_out_of_range");
-    // FIXME(): ?should have pure signature index that different typeIndex but same signature will have same pure signature index?
-    elementIndexToFunctionIndex.push_back(functionIndex); // offset assumed and only supported zero yet
+    // offset is in number of Data
+    elementIndexToFunctionIndex.set(elementIndex, functionIndex);
   }
 }
 void Frontend::parseExportSection() {
@@ -204,7 +221,9 @@ void Frontend::parseExportSection() {
     WasmImportExportType const type{br_.readByte<WasmImportExportType>()};
     uint32_t const index = br_.readLEB128<uint32_t>();
 
-    confirm(type == WasmImportExportType::FUNC, "only function export supported yet");
+    if (type != WasmImportExportType::FUNC) {
+      continue; ///< only function export supported yet
+    }
 
     module_.export_.push_back({exportName, type, index});
     module_.exportFuncNameToIndex_[exportName] = index;
@@ -895,7 +914,71 @@ void Frontend::parseCodeSection() {
 
         break;
       }
-      case OPCode::CALL_INDIRECT:
+      case OPCode::CALL_INDIRECT: {
+        confirm(module_.hasTable, "must has table for CALL_INDIRECT");
+        // The index of the function type/signature is given as an immediate to this instruction
+        uint32_t const expectedSignatureIndex = br_.readLEB128<uint32_t>();
+        uint32_t const expectedPureSigIndex = module_.getPureSignatureIndex(module_.typeInfo_[expectedSignatureIndex].signature);
+        // Only table index 0 is supported in the MVP of Wasm
+        confirm(br_.readLEB128<uint32_t>() == 0U, "must");
+
+        ///< Get and check table element index
+        REG const elementIndex = REG::R9;
+        confirm(!stack_.pop().isI64(), "CALL_INDIRECT need one i32 element index");
+        op.subROP(false);
+        as_.ldr_base_off(elementIndex, ROP, 0U, false);
+        // TRAP if elementIndex is not smaller than the length of tab.elem
+        as_.cmp_r_imm(elementIndex, module_.numberElements, false);
+        Relpatch const notOutOfRange = as_.prepareJmp(CC::LO);
+        as_.setTrap(Trapcode::TableElement_out_of_range);
+        notOutOfRange.linkToHere();
+        // TRAP if tab.elem[𝑖] is uninitialized
+        confirm(module_.numberElements == module_.tableInitialSize, "must be all initialized");
+
+        ///< Get its pure signature index
+        REG const callPureSigIndexReg = REG::R10; // 4B
+        as_.emit_mov_x_imm64(REG::R11, elementIndexToPureSignatureIndex.getStartAddr());
+        as_.ldr_offReg(callPureSigIndexReg, REG::R11, elementIndex, false);
+        ///< Check if the signature index matches the expected one
+        as_.cmp_r_imm(callPureSigIndexReg, expectedPureSigIndex, false);
+        Relpatch const signatureMatch = as_.prepareJmp(CC::EQ);
+        as_.setTrap(Trapcode::IndirectCall_signature_mismatch);
+        signatureMatch.linkToHere();
+
+        ///< Prepare call params, since matched signature is compile-time known
+        auto const &callType = module_.typeInfo_[expectedSignatureIndex];
+        // pure signature index is checked above, so we can use it to get the function type
+        prepareCallParams(expectedSignatureIndex, op);
+
+        ///< Get function abs address
+        REG const functionIndex = REG::R11; // 4B
+        // reuse R10 as base address
+        as_.emit_mov_x_imm64(REG::R10, elementIndexToFunctionIndex.getStartAddr());
+        as_.ldr_offReg(functionIndex, REG::R10, elementIndex, false);
+
+        ///< Emit call
+        Storage const functionIndexRegStorage{REG{functionIndex}};
+        // emitWasmCall will use R9 R10 as scratch registers, functionIndexRegStorage as the param should avoid using R9 or R10
+        emitWasmCall(functionIndexRegStorage);
+
+        // restore result in R0 if has return value
+        if (callType.results.size() == 1U) {
+          bool const is64bit = (callType.results[0] == WasmType::I64);
+          as_.str_base_off(ROP, REG::R0, 0U, is64bit);
+          op.addROP(is64bit);
+          // push the return value type to stack
+          stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
+        }
+
+        // restore current function's params back to registers
+        for (uint32_t i = 0U; i < funcTypeInfo.params.size(); i++) {
+          auto const &param = funcBody.locals[i];
+          confirm(param.isParam, "must be param");
+          confirm(param.type == funcTypeInfo.params[i], "param type should match the validation");
+          as_.ldr_base_off(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
+        }
+        break;
+      }
       case OPCode::UNREACHABLE:
       case OPCode::BR_TABLE:
       case OPCode::REF_NULL:
@@ -1018,6 +1101,7 @@ void Frontend::emitWasmCall(Storage const callFuncIndex) {
     // offset reg will times 8
     as_.ldr_offReg(REG::R10, REG::R9, callFuncIndex.location_.reg, true);
   } else if (callFuncIndex.type_ == StorageType::CONSTANT) {
+    // offset imm is byte
     as_.ldr_base_off(REG::R10, REG::R9, callFuncIndex.location_.constUnion.u32 * sizeof(uintptr_t), true);
   } else {
     confirm(false, "not supported yet");
@@ -1039,6 +1123,17 @@ void Frontend::LabelManager::relpatchAllLabels() {
     } else {
       as_.set_b_off(branchInsPosOff, insOffset);
     }
+  }
+}
+
+void Frontend::makeElementIndexToPureSignatureIndex() {
+  for (uint32_t elementIndex = 0U; elementIndex < module_.numberElements; elementIndex++) {
+    uint32_t const functionIndex = elementIndexToFunctionIndex.get<uint32_t>(elementIndex);
+    std::string const &currentSignatureString = module_.typeInfo_[module_.funcIndex2TypeIndex_[functionIndex]].signature;
+    LOG_DEBUG << "elementIndex[" << elementIndex << "]funcIndex[" << functionIndex << "] sig.size=" << currentSignatureString.size() << ":"
+              << currentSignatureString << LOG_END;
+    uint32_t const pureSignatureIndex = module_.getPureSignatureIndex(currentSignatureString);
+    elementIndexToPureSignatureIndex.set(elementIndex, pureSignatureIndex);
   }
 }
 

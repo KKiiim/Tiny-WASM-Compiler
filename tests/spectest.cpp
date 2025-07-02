@@ -64,6 +64,14 @@ TEST(Chapter08, call) {
   }
 }
 
+TEST(Chapter09, call_indirect) {
+  JsonReader const jsonReader("tests/testcases/tmp/call_indirect.json");
+  LOG_YELLOW << ConsoleYellow << "Testing call_indirect.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
+
 //////////////////////////////////////////////
 /////////////Optional Spec Test///////////////
 //////////////////////////////////////////////

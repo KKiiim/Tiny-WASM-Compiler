@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "wasm_type.hpp"
@@ -15,6 +16,7 @@ public:
   struct TypeInfo {
     std::vector<WasmType> params;
     std::vector<WasmType> results;
+    std::string signature; // multi signatureIndex(type index) may match same string(pure signature)
   };
   struct ExportInfo {
     std::string exportName;
@@ -39,7 +41,7 @@ public:
     uint32_t nameSubsectionType;
   };
 
-  SignatureType wasmType2SignatureType(WasmType const type) const;
+  static SignatureType wasmType2SignatureType(WasmType const type);
   bool validateSignature(uint32_t const functionIndex, std::string const &signature) const;
 
   // Parsed from code section: functionIndex i to FunctionInfo
@@ -60,6 +62,11 @@ public:
   uint32_t numberElements{};
   uint32_t tableInitialSize{};
   uint32_t tableMaximumSize{};
+
+  void setPureSignatureIndex(std::string const &signatureString);
+  uint32_t getPureSignatureIndex(std::string const &signatureString) const;
+
+  std::unordered_map<std::string, uint32_t> signatureStringToPureSigIndex; // 1-1 mapping
 };
 
 #endif
