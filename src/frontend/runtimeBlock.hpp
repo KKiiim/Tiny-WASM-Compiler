@@ -44,7 +44,9 @@ public:
     if (readPos >= defaultBlockSize) {
       throw std::runtime_error("read oom");
     }
-    return *static_cast<Data *>(static_cast<void *>(&m_[readPos]));
+    Data result;
+    memcpy(&result, &m_[readPos], sizeof(Data));
+    return result;
   }
 
 private:
