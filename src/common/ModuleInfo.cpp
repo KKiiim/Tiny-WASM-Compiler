@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <string>
 
 #include "ModuleInfo.hpp"
 
@@ -20,34 +21,8 @@ SignatureType ModuleInfo::wasmType2SignatureType(WasmType const type) {
 }
 
 bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string const &signature) const {
-  uint32_t const signatureIndex = funcIndex2TypeIndex_[functionIndex];
-  auto const &funcTypeInfo = typeInfo_[signatureIndex];
-  confirm(signature.size() >= 2U, "signature must have at least 2 characters '(' and ')'");
-  confirm(((funcTypeInfo.results.size() + funcTypeInfo.params.size()) == (signature.size() - 2U)),
-          "Signature should match the number of parameters in the function type");
-
-  SignatureType const signaturePrefixType = static_cast<SignatureType>(signature[0]);
-  if (funcTypeInfo.results.empty()) {
-    confirm(signaturePrefixType == SignatureType::PARAMSTART, "Signature should start with '(' when there are no results");
-  } else {
-    SignatureType const retType = wasmType2SignatureType(funcTypeInfo.results[0]);
-    if (signaturePrefixType != retType) {
-      throw std::runtime_error("Signature prefix type does not match function return type");
-    }
-  }
-
-  uint32_t sigIndex = funcTypeInfo.results.empty() ? 1U : 2U; // Skip return type if exists, skip '('
-  // check parameters
-  for (uint32_t i = 0; i < funcTypeInfo.params.size(); ++i) {
-    if (wasmType2SignatureType(funcTypeInfo.params[i]) == static_cast<SignatureType>(signature[sigIndex])) {
-      sigIndex++;
-    } else {
-      LOG_ERROR << "Signature parameter type does not match function parameter type at index " << std::to_string(i) << LOG_END;
-      return false;
-    }
-  }
-  confirm(static_cast<SignatureType>(signature[sigIndex]) == SignatureType::PARAMEND, "Signature should end with ')' after parameters");
-  return true;
+  std::string const &expectedSignature = getTypeInfo(functionIndex).signature;
+  return expectedSignature == signature;
 }
 void ModuleInfo::SignatureMap::set(std::string const &signatureString) {
   if (strToPureIndex.find(signatureString) == strToPureIndex.end()) {

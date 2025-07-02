@@ -7,7 +7,7 @@
 #include <string>
 #include <type_traits>
 
-#include "src/backend/aarch64Assembler.hpp"
+#include "src/common/ModuleInfo.hpp"
 #include "src/common/logger.hpp"
 #include "src/compiler.hpp"
 
@@ -29,14 +29,24 @@ public:
   void initialize();
 
   struct CallReturn {
-    bool hasTrapped;
-    uint64_t returnValue; // max support 64 bits number
+    bool hasTrapped{false};
+    uint64_t returnValue{};
   };
 
-  template <typename T, typename... Args> CallReturn callByName(std::string const &funcName, std::string const &signature, Args &&...args) {
+  template <typename TRet, typename... Args> CallReturn callByName(std::string const &funcName, std::string const &signature, Args &&...args) {
+    ModuleInfo const &moduleInfo = compiler_.getModuleInfo();
+    ///< Get function index
+    auto const &funcIndex = moduleInfo.exportFuncNameToIndex_.find(funcName);
+    if (funcIndex == moduleInfo.exportFuncNameToIndex_.end()) {
+      throw std::runtime_error("Function not found: " + funcName);
+    }
+    uint32_t const functionIndex = funcIndex->second;
+    if (!moduleInfo.validateSignature(functionIndex, signature)) {
+      throw std::runtime_error("Signature validation failed for function: " + funcName);
+    }
+
     CallReturn ret{};
 
-    ret.hasTrapped = false;
     // set nonzero savemask for saving the signal mask(set in Runtime)
     int status = sigsetjmp(globalTrapEnv, 1); // NOLINT(misc-const-correctness)
     LOG_DEBUG << "status=" << status << LOG_END;
@@ -44,12 +54,12 @@ public:
       ///< Normal call
 
       ///< if-constexpr only supported after C++17
-      if constexpr (!std::is_void<T>::value) {
+      if constexpr (!std::is_void<TRet>::value) {
         // if (signature[0] != '(') {
-        T const v = compiler_.singleCallByName<T>(funcName, signature, std::forward<Args>(args)...);
+        TRet const v = compiler_.singleCallByIndex<TRet>(functionIndex, std::forward<Args>(args)...);
         ret.returnValue = static_cast<uint64_t>(v);
       } else {
-        compiler_.singleCallByName<void>(funcName, signature, std::forward<Args>(args)...);
+        compiler_.singleCallByIndex<void>(functionIndex, std::forward<Args>(args)...);
         ret.returnValue = 0; // No return value for void functions
       }
     }
@@ -65,6 +75,7 @@ private:
 
 private:
   Compiler &compiler_;
+  RuntimeBlock<uint8_t> operandStack_; ///< JIT runtime stack for simulate WASM operand stack
 };
 
 #endif // SRC_COMMON_EXCEPTION_HPP

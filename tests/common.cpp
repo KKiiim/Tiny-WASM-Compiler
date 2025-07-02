@@ -19,7 +19,6 @@ void execTest(TestCase const &testCase, Runtime &runtime) {
   testCase.setParams(params);
   auto const &signature = testCase.getSignature();
 
-  // TODO(): compare the trap message and the assert_trap text
   Runtime::CallReturn ret{};
   if (testCase.expected.ret.empty()) {
     ret = runtime.callByName<void>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
