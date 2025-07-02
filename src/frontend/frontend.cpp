@@ -149,7 +149,7 @@ void Frontend::parseTypeSection() {
     module_.typeInfo_.push_back({paramInfos, resultInfos, signature});
 
     // Check whether a previous signature matched. Needed for indirect calls to matching signatures with different indices
-    module_.setPureSignatureIndex(signature);
+    module_.signatureStringToPureSigIndex.set(signature);
   }
 }
 void Frontend::parseFunctionSection() {
@@ -241,8 +241,7 @@ void Frontend::parseCodeSection() {
     OP op{as_};
     LabelManager labelManager{as_};
 
-    uint32_t const funcSignatureIndex{module_.funcIndex2TypeIndex_[currentFuncIndex]};
-    auto const &funcTypeInfo = module_.typeInfo_[funcSignatureIndex];
+    auto const &funcTypeInfo = module_.getTypeInfo(currentFuncIndex);
 
     ModuleInfo::FunctionInfo funcBody{};
     uint32_t const stackElementIndex = stack_.push(StackElement{ElementType::FUNC_START});
@@ -888,9 +887,9 @@ void Frontend::parseCodeSection() {
 
         uint32_t const callIndex{br_.readLEB128<uint32_t>()};
         confirm(callIndex < module_.funcIndex2TypeIndex_.size(), "function index out of range");
-        auto const &callType = module_.typeInfo_[module_.funcIndex2TypeIndex_[callIndex]];
+        auto const &callType = module_.getTypeInfo(callIndex);
 
-        prepareCallParams(module_.funcIndex2TypeIndex_[callIndex], op);
+        prepareCallParams(callType, op);
 
         Storage const callIndexStorage{ConstUnion{callIndex}};
         emitWasmCall(callIndexStorage);
@@ -918,7 +917,7 @@ void Frontend::parseCodeSection() {
         confirm(module_.hasTable, "must has table for CALL_INDIRECT");
         // The index of the function type/signature is given as an immediate to this instruction
         uint32_t const expectedSignatureIndex = br_.readLEB128<uint32_t>();
-        uint32_t const expectedPureSigIndex = module_.getPureSignatureIndex(module_.typeInfo_[expectedSignatureIndex].signature);
+        uint32_t const expectedPureSigIndex = module_.signatureStringToPureSigIndex.get(module_.typeInfo_[expectedSignatureIndex].signature);
         // Only table index 0 is supported in the MVP of Wasm
         confirm(br_.readLEB128<uint32_t>() == 0U, "must");
 
@@ -948,7 +947,7 @@ void Frontend::parseCodeSection() {
         ///< Prepare call params, since matched signature is compile-time known
         auto const &callType = module_.typeInfo_[expectedSignatureIndex];
         // pure signature index is checked above, so we can use it to get the function type
-        prepareCallParams(expectedSignatureIndex, op);
+        prepareCallParams(callType, op);
 
         ///< Get function abs address
         REG const functionIndex = REG::R11; // 4B
@@ -1077,8 +1076,7 @@ void Frontend::parseNameSection() {
   //   name += static_cast<char>(br_.readByte());
   // }
 }
-void Frontend::prepareCallParams(uint32_t const funcSignatureIndex, OP &op) {
-  auto const &callType = module_.typeInfo_[funcSignatureIndex];
+void Frontend::prepareCallParams(ModuleInfo::TypeInfo const &callType, OP &op) {
   auto const &callParams = callType.params;
   confirm(callParams.size() <= 8, "call params size should not exceed 8");
   // validate
@@ -1129,10 +1127,10 @@ void Frontend::LabelManager::relpatchAllLabels() {
 void Frontend::makeElementIndexToPureSignatureIndex() {
   for (uint32_t elementIndex = 0U; elementIndex < module_.numberElements; elementIndex++) {
     uint32_t const functionIndex = elementIndexToFunctionIndex.get<uint32_t>(elementIndex);
-    std::string const &currentSignatureString = module_.typeInfo_[module_.funcIndex2TypeIndex_[functionIndex]].signature;
+    std::string const &currentSignatureString = module_.getTypeInfo(functionIndex).signature;
     LOG_DEBUG << "elementIndex[" << elementIndex << "]funcIndex[" << functionIndex << "] sig.size=" << currentSignatureString.size() << ":"
               << currentSignatureString << LOG_END;
-    uint32_t const pureSignatureIndex = module_.getPureSignatureIndex(currentSignatureString);
+    uint32_t const pureSignatureIndex = module_.signatureStringToPureSigIndex.get(currentSignatureString);
     elementIndexToPureSignatureIndex.set(elementIndex, pureSignatureIndex);
   }
 }

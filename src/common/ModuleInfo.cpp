@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <stdexcept>
 
 #include "ModuleInfo.hpp"
@@ -50,18 +49,18 @@ bool ModuleInfo::validateSignature(uint32_t const functionIndex, std::string con
   confirm(static_cast<SignatureType>(signature[sigIndex]) == SignatureType::PARAMEND, "Signature should end with ')' after parameters");
   return true;
 }
-void ModuleInfo::setPureSignatureIndex(std::string const &signatureString) {
-  if (signatureStringToPureSigIndex.find(signatureString) == signatureStringToPureSigIndex.end()) {
+void ModuleInfo::SignatureMap::set(std::string const &signatureString) {
+  if (strToPureIndex.find(signatureString) == strToPureIndex.end()) {
     // set new
-    uint32_t const pureSignatureIndex = signatureStringToPureSigIndex.size();
-    signatureStringToPureSigIndex[signatureString] = pureSignatureIndex;
+    uint32_t const pureSignatureIndex = strToPureIndex.size();
+    strToPureIndex[signatureString] = pureSignatureIndex;
     LOG_DEBUG << "New pure signature index: " << pureSignatureIndex << " for signature: " << signatureString << LOG_END;
   }
 }
-uint32_t ModuleInfo::getPureSignatureIndex(std::string const &signatureString) const {
+uint32_t ModuleInfo::SignatureMap::get(std::string const &signatureString) const {
   LOG_DEBUG << "Get pure signature index for signature: " << signatureString << LOG_END;
-  if (signatureStringToPureSigIndex.find(signatureString) == signatureStringToPureSigIndex.end()) {
+  if (strToPureIndex.find(signatureString) == strToPureIndex.end()) {
     throw std::runtime_error("Signature string not found in pure signature index map");
   }
-  return signatureStringToPureSigIndex.at(signatureString);
+  return strToPureIndex.at(signatureString);
 }

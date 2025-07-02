@@ -103,7 +103,7 @@ private:
 
 private:
   void emitWasmCall(Storage const callFuncIndex);
-  void prepareCallParams(uint32_t const funcSignatureIndex, OP &op);
+  void prepareCallParams(ModuleInfo::TypeInfo const &callType, OP &op);
 
   void makeElementIndexToPureSignatureIndex();
 

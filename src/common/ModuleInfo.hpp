@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "wasm_type.hpp"
@@ -43,6 +42,9 @@ public:
 
   static SignatureType wasmType2SignatureType(WasmType const type);
   bool validateSignature(uint32_t const functionIndex, std::string const &signature) const;
+  inline TypeInfo const &getTypeInfo(uint32_t const functionIndex) const {
+    return typeInfo_[funcIndex2TypeIndex_[functionIndex]];
+  }
 
   // Parsed from code section: functionIndex i to FunctionInfo
   std::vector<FunctionInfo> functionInfos_;
@@ -63,10 +65,19 @@ public:
   uint32_t tableInitialSize{};
   uint32_t tableMaximumSize{};
 
-  void setPureSignatureIndex(std::string const &signatureString);
-  uint32_t getPureSignatureIndex(std::string const &signatureString) const;
+  /// @brief 1-1 Map from string view function signature to pure signature index
+  class SignatureMap {
+  public:
+    // setPureSignatureIndex
+    void set(std::string const &signatureString);
+    // getPureSignatureIndex
+    uint32_t get(std::string const &signatureString) const;
 
-  std::unordered_map<std::string, uint32_t> signatureStringToPureSigIndex; // 1-1 mapping
+  private:
+    std::unordered_map<std::string, uint32_t> strToPureIndex;
+  };
+
+  SignatureMap signatureStringToPureSigIndex; // 1-1 mapping
 };
 
 #endif
