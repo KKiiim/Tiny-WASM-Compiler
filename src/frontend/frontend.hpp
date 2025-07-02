@@ -103,12 +103,16 @@ private:
 
 private:
   void emitWasmCall(Storage const callFuncIndex);
-  void prepareCallParams(uint32_t const funcSignatureIndex, OP &op);
+  void prepareCallParams(ModuleInfo::TypeInfo const &callType, OP &op);
+
+  void makeElementIndexToPureSignatureIndex();
 
 public:
   SymbolTable sTable_;
   bool codeSectionParsed = false;
-  std::vector<uint32_t> elementIndexToFunctionIndex;
+
+  RuntimeBlock elementIndexToFunctionIndex;      ///< 4bytes array by element index to function index
+  RuntimeBlock elementIndexToPureSignatureIndex; ///< 4bytes array by element index to pure function signature index
 
 private:
   BytecodeReader br_;

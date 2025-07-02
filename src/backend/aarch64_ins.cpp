@@ -68,9 +68,9 @@ void Assembler::ldr_base_off(REG const destReg, REG const addrReg, uint32_t cons
 void Assembler::ldr_offReg(REG const destReg, REG const addrReg, REG const offsetReg, bool const is64bit) {
   // size(1 x) 11 1000 011 Rm option(3) S(1) 10 Rn Rt
   // 1011 1000 011 Rm 010(UXTW) 1(S) 10 Rn Rt
-  // B8604C00
+  // B8605800
 
-  OPCodeTemplate opcode = is64bit ? 0xF8604C00 : 0xB8604C00;
+  OPCodeTemplate opcode = is64bit ? 0xF8605800 : 0xB8605800;
   opcode |= (static_cast<OPCodeTemplate>(offsetReg) << 16U);
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
   opcode |= static_cast<OPCodeTemplate>(destReg);

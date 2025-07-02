@@ -15,6 +15,7 @@ public:
   struct TypeInfo {
     std::vector<WasmType> params;
     std::vector<WasmType> results;
+    std::string signature; // multi signatureIndex(type index) may match same string(pure signature)
   };
   struct ExportInfo {
     std::string exportName;
@@ -39,8 +40,11 @@ public:
     uint32_t nameSubsectionType;
   };
 
-  SignatureType wasmType2SignatureType(WasmType const type) const;
+  static SignatureType wasmType2SignatureType(WasmType const type);
   bool validateSignature(uint32_t const functionIndex, std::string const &signature) const;
+  inline TypeInfo const &getTypeInfo(uint32_t const functionIndex) const {
+    return typeInfo_[funcIndex2TypeIndex_[functionIndex]];
+  }
 
   // Parsed from code section: functionIndex i to FunctionInfo
   std::vector<FunctionInfo> functionInfos_;
@@ -60,6 +64,20 @@ public:
   uint32_t numberElements{};
   uint32_t tableInitialSize{};
   uint32_t tableMaximumSize{};
+
+  /// @brief 1-1 Map from string view function signature to pure signature index
+  class SignatureMap {
+  public:
+    // setPureSignatureIndex
+    void set(std::string const &signatureString);
+    // getPureSignatureIndex
+    uint32_t get(std::string const &signatureString) const;
+
+  private:
+    std::unordered_map<std::string, uint32_t> strToPureIndex;
+  };
+
+  SignatureMap signatureStringToPureSigIndex; // 1-1 mapping
 };
 
 #endif
