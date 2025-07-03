@@ -130,7 +130,7 @@ void Frontend::parseGlobalSection() {
 
     if (globalInfo.isMutable) {
       globalInfo.offset = globalOffset;
-      globalMemory.set(globalInfo.offset, globalInfo.value);
+      globalMemory.set(globalInfo.offset / sizeof(uint64_t), globalInfo.value);
       globalOffset += 8U; // aligned to 8 bytes
     }
     confirm(br_.readByte<OPCode>() == OPCode::END, "global declaration must end with END");
@@ -987,7 +987,7 @@ void Frontend::parseCodeSection() {
         auto const &globalInfo = module_.globalManager[globalIndex];
         if (globalInfo.isMutable) {
           // global stored as 8 bytes aligned
-          as_.ldr_base_byteOff(REG::R9, GLOBAL, globalInfo.offset * sizeof(uint64_t), true);
+          as_.ldr_base_byteOff(REG::R9, GLOBAL, globalInfo.offset, true);
         } else {
           as_.emit_mov_x_imm64(REG::R9, globalInfo.value);
         }
@@ -1005,7 +1005,7 @@ void Frontend::parseCodeSection() {
         op.subROP(globalInfo.is64bit);
         as_.ldr_base_byteOff(REG::R9, ROP, 0U, globalInfo.is64bit);
         // global stored as 8 bytes aligned
-        as_.str_base_byteOff(GLOBAL, REG::R9, globalInfo.offset * sizeof(uint64_t), true);
+        as_.str_base_byteOff(GLOBAL, REG::R9, globalInfo.offset, true);
         break;
       }
       case OPCode::UNREACHABLE:
