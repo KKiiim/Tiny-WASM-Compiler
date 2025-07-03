@@ -58,8 +58,10 @@ void Runtime::unregisterSignalHandler() const {
 void Runtime::initialize() {
   Assembler as{}; // temporary emitter
 
-  ///< Init X28 for operandStack
-  as.emit_mov_x_imm64(REG::R28, operandStack_.getStartAddr());
+  ///< Init X28(ROP) for operandStack
+  as.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
+  ///< Init X27(GLOBAL) for global memory
+  as.emit_mov_x_imm64(GLOBAL, compiler_.getGlobalMemoryStartAddress());
   as.ret();
   ExecutableMemory const &exec = as.getExecutableMemory();
   void (*const init)() = exec.data<void (*)()>();

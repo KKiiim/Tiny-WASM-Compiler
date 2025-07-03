@@ -23,6 +23,9 @@ public:
   inline ModuleInfo const &getModuleInfo() const {
     return module_;
   }
+  inline uintptr_t getGlobalMemoryStartAddress() const {
+    return frontend_.globalMemory.getStartAddr();
+  }
 
 private:
   Stack stack_; ///< Compile time stack

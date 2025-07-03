@@ -38,11 +38,11 @@ public:
 
   void ret();
   /// @brief LDR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
-  void ldr_base_off(REG const destReg, REG const addrReg, uint32_t const offset, bool const is64bit);
+  void ldr_base_byteOff(REG const destReg, REG const addrReg, uint32_t const byteOffset, bool const is64bit);
   /// default shift 2 for 32bits(offset times 4), shift 3 for 64bits(offset times 8)
   void ldr_offReg(REG const destReg, REG const addrReg, REG const offsetReg, bool const is64bit);
   /// @brief STR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
-  void str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit);
+  void str_base_byteOff(REG const addrReg, REG const srcReg, uint32_t const byteOffset, bool const is64bit);
   /// @brief ADD R[d], R[s], imm
   void add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit);
   /// @brief ADD R[d], R[n], R[m]

@@ -24,6 +24,8 @@ constexpr uint32_t totalNumRegs{static_cast<uint32_t>(REG::NUMREGS)}; ///< Total
 ///////////////////////////////////////////////////////////////////
 // R28 always point the next free space in the stack
 static constexpr const REG ROP = REG::R28;
+// R27 points to the start of global memory
+static constexpr const REG GLOBAL = REG::R27;
 ///////////////////////////////////////////////////////////////////
 
 namespace RegUtil {

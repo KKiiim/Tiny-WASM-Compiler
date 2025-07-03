@@ -44,12 +44,12 @@ uint32_t OP::add(WasmType const localType) {
 // TODO(): Stupid and inefficient implementation, but simple, let's do it this way first
 
 void OP::get_r_param(uint32_t const paramIndex, bool const is64bit) {
-  as_.str_base_off(ROP, static_cast<REG>(paramIndex), 0U, is64bit);
+  as_.str_base_byteOff(ROP, static_cast<REG>(paramIndex), 0U, is64bit);
   addROP(is64bit);
 }
 void OP::set_r_param(uint32_t const paramIndex, bool const is64bit, bool const isTee = false) {
   subROP(is64bit);
-  as_.ldr_base_off(static_cast<REG>(paramIndex), ROP, 0U, is64bit);
+  as_.ldr_base_byteOff(static_cast<REG>(paramIndex), ROP, 0U, is64bit);
   // TODO(): reduce ins, if tee don't sub sp, can use signed offset load(not support yet)
   if (isTee) {
     // restore the ROP
@@ -59,16 +59,16 @@ void OP::set_r_param(uint32_t const paramIndex, bool const is64bit, bool const i
 void OP::get_ofsp_local(uint32_t const offset2SP, bool const is64bit) {
   // Use R9 as scratch register
   confirm(offset2SP <= MaxPositiveImmForLdrStr, "offset2SP too large");
-  as_.ldr_base_off(REG::R9, REG::SP, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit);
-  as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+  as_.ldr_base_byteOff(REG::R9, REG::SP, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit);
+  as_.str_base_byteOff(ROP, REG::R9, 0U, is64bit);
   addROP(is64bit);
 }
 void OP::set_ofsp_local(uint32_t const offset2SP, bool const is64bit, bool const isTee = false) {
   // Use R9 as scratch register
   subROP(is64bit);
   confirm(offset2SP <= MaxPositiveImmForLdrStr, "offset2SP too large");
-  as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
-  as_.str_base_off(REG::SP, REG::R9, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit);
+  as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
+  as_.str_base_byteOff(REG::SP, REG::R9, static_cast<int32_t>(offset2SP & MaxPositiveImmForLdrStr), is64bit);
   // TODO(): reduce ins, if tee don't sub sp, can use signed offset load(not support yet)
   if (isTee) {
     // restore the ROP

@@ -71,6 +71,7 @@ private:
   void parseNameSection();
   void parseElementSection();
   void parseTableSection();
+  void parseGlobalSection();
 
   void compile();
 
@@ -89,6 +90,8 @@ public:
   RuntimeBlock<uintptr_t> funcAddrTable;                   ///< 8bytes array by function index to function abs address
   RuntimeBlock<uint32_t> elementIndexToFunctionIndex;      ///< 4bytes array by element index to function index
   RuntimeBlock<uint32_t> elementIndexToPureSignatureIndex; ///< 4bytes array by element index to pure function signature index
+
+  RuntimeBlock<uint64_t> globalMemory; ///< JIT runtime global memory. u32 and u64 are aligned to 8 bytes to store
 
 private:
   BytecodeReader br_;
