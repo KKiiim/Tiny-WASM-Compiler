@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     Runtime runtime{compiler};
     runtime.initialize();
 
-    Runtime::CallReturn const ret = runtime.callByName<uint32_t>("div_s", "i(ii)", 0, 0);
+    Runtime::CallReturn const ret = runtime.callByName<uint32_t>("get-y", "I()");
     if (ret.hasTrapped) {
       LOG_YELLOW << "TrapException caught with code: " << runtime.getTrapCode() << LOG_END;
       LOG_YELLOW << "Exception: " << runtime.getTrapMessage() << LOG_END;

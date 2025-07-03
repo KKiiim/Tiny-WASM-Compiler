@@ -15,7 +15,7 @@ void Assembler::ret() {
   constexpr const OPCodeTemplate insRET = 0xd65f03c0; // big endian
   append(insRET);
 }
-void Assembler::str_base_off(REG const addrReg, REG const srcReg, uint32_t const offset, bool const is64bit) {
+void Assembler::str_base_byteOff(REG const addrReg, REG const srcReg, uint32_t const byteOffset, bool const is64bit) {
   // Encoding for the 32-bit variant
   // Applies when (size == 10)
   // STR <Wt>, [<Xn|SP>{, #<pimm>}]
@@ -31,35 +31,35 @@ void Assembler::str_base_off(REG const addrReg, REG const srcReg, uint32_t const
   // currently only support positive offset(bytes)
   uint32_t off = 0U;
   if (is64bit) {
-    confirm(offset % 8U == 0U, "Immediate offset must be multiple of 8 for 64-bit");
-    off = offset / 8U; // convert to number of 64-bit words
+    confirm(byteOffset % 8U == 0U, "Immediate offset must be multiple of 8 for 64-bit");
+    off = byteOffset / 8U; // convert to number of 64-bit words
   } else {
-    confirm(offset % 4U == 0U, "Immediate offset must be multiple of 4 for 32-bit");
-    off = offset / 4U; // convert to number of 32-bit words
+    confirm(byteOffset % 4U == 0U, "Immediate offset must be multiple of 4 for 32-bit");
+    off = byteOffset / 4U; // convert to number of 32-bit words
   }
   confirm(off <= 0xFFFU, "Immediate out of range");
   opcode |= (off & 0xFFFU) << 10U;
   append(opcode);
 }
-void Assembler::ldr_base_off(REG const destReg, REG const addrReg, uint32_t const offset, bool const is64bit) {
+void Assembler::ldr_base_byteOff(REG const destReg, REG const addrReg, uint32_t const byteOffset, bool const is64bit) {
   // Applies when (size == 10)
   // LDR <Wt>, [<Xn|SP>{, #<pimm>}]
   // Applies when (size == 11)
   // LDR <Xt>, [<Xn|SP>{, #<pimm>}]
 
+  // Unsigned offset
   // 1x 111001 01 imm12 Rn Rt
   // F9400000 B9400000
   OPCodeTemplate opcode = is64bit ? 0xF9400000 : 0xB9400000;
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U); // addr 5-9
   opcode |= static_cast<OPCodeTemplate>(destReg);         // dest 0-4
-  // currently only support positive offset(bytes)
   uint32_t off = 0U;
   if (is64bit) {
-    confirm(offset % 8U == 0U, "Immediate offset must be multiple of 8 for 64-bit");
-    off = offset / 8U; // convert to number of 64-bit words
+    confirm(byteOffset % 8U == 0U, "Immediate offset must be multiple of 8 for 64-bit");
+    off = byteOffset / 8U; // convert to number of 64-bit words
   } else {
-    confirm(offset % 4U == 0U, "Immediate offset must be multiple of 4 for 32-bit");
-    off = offset / 4U; // convert to number of 32-bit words
+    confirm(byteOffset % 4U == 0U, "Immediate offset must be multiple of 4 for 32-bit");
+    off = byteOffset / 4U; // convert to number of 32-bit words
   }
   confirm(off <= 0xFFFU, "Immediate out of range");
   opcode |= (off & 0xFFFU) << 10U;
@@ -353,16 +353,16 @@ void Assembler::emit_mov_w_imm32(REG const destReg, uint32_t const imm) {
 void Assembler::decreaseSPWithClean(uint32_t const bytes) {
   confirm(bytes % 16 == 0, "[decreaseSPWithClean]size must be aligned to 16 bytes");
   // TODO(): support larger size
-  confirm((bytes < static_cast<uint32_t>(INT32_MAX)), "size must be less than int32_t max value since str_base_off offset max support 32bit");
+  confirm((bytes < static_cast<uint32_t>(INT32_MAX)), "size must be less than int32_t max value since str_base_byteOff offset max support 32bit");
   dec_sp(bytes);
 
   ///< Clean the stack memory. TODO(): how to simplify this?
   // R9 used as scratch register
   mov_r_imm16(REG::R9, 0U, true);
-  uint32_t const bytesPerStr = 8U; // 64bits register, 8 bytes per str_base_off
+  uint32_t const bytesPerStr = 8U; // 64bits register, 8 bytes per str_base_byteOff
   for (uint32_t i = 0; i < bytes / bytesPerStr; ++i) {
     uint32_t const offset = static_cast<uint32_t>(i * 8U);
-    str_base_off(REG::SP, REG::R9, offset, true);
+    str_base_byteOff(REG::SP, REG::R9, offset, true);
   }
 }
 

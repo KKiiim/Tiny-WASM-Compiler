@@ -120,19 +120,18 @@ void Frontend::parseGlobalSection() {
     OPCode const dataType = br_.readByte<OPCode>();
     confirm((((dataType == OPCode::I32_CONST) && (!is64bit)) || ((dataType == OPCode::I64_CONST) && is64bit)), "global type and init value mismatch");
 
-    if (globalInfo.isMutable) {
-      globalInfo.offset = globalOffset;
-      globalOffset += is64bit ? 8U : 4U;
+    if (is64bit) {
+      globalInfo.value = bit_cast<uint64_t>(br_.readLEB128<int64_t>());
+    } else {
+      // Aligned to 8 bytes, u32 use low 4 bytes
+      uint64_t const u64Value = bit_cast<uint64_t>(static_cast<int64_t>(br_.readLEB128<int32_t>()));
+      globalInfo.value = u64Value;
     }
 
-    if (is64bit) {
-      ConstUnion data{};
-      data.u64 = bit_cast<uint64_t>(br_.readLEB128<int64_t>());
-      globalInfo.value = data;
-    } else {
-      ConstUnion data{};
-      data.u32 = bit_cast<uint32_t>(br_.readLEB128<int32_t>());
-      globalInfo.value = data;
+    if (globalInfo.isMutable) {
+      globalInfo.offset = globalOffset;
+      globalMemory.set(globalInfo.offset, globalInfo.value);
+      globalOffset += 8U; // aligned to 8 bytes
     }
     confirm(br_.readByte<OPCode>() == OPCode::END, "global declaration must end with END");
     module_.globalManager.push_back(globalInfo);
@@ -334,7 +333,7 @@ void Frontend::parseCodeSection() {
           bool const is64bit = currentFuncTypeInfo.results[0] == WasmType::I64;
           // prepare return value
           op.subROP(is64bit);
-          as_.ldr_base_off(REG::R0, REG::R28, 0U, is64bit);
+          as_.ldr_base_byteOff(REG::R0, REG::R28, 0U, is64bit);
         }
         if (stackUsage != 0U) {
           as_.inc_sp(stackUsage);
@@ -387,7 +386,7 @@ void Frontend::parseCodeSection() {
         stack_.push(StackElement{ElementType::I32});
         // Use W9 as scratch register
         as_.emit_mov_w_imm32(REG::R9, v);
-        as_.str_base_off(ROP, REG::R9, 0U, false);
+        as_.str_base_byteOff(ROP, REG::R9, 0U, false);
         as_.add_r_r_imm(ROP, ROP, 4U, true);
         break;
       }
@@ -396,7 +395,7 @@ void Frontend::parseCodeSection() {
         stack_.push(StackElement{ElementType::I64});
         // Use W9 as scratch register
         as_.emit_mov_x_imm64(REG::R9, v);
-        as_.str_base_off(ROP, REG::R9, 0U, true);
+        as_.str_base_byteOff(ROP, REG::R9, 0U, true);
         as_.add_r_r_imm(ROP, ROP, 8U, true);
         break;
       }
@@ -412,14 +411,14 @@ void Frontend::parseCodeSection() {
 
         // Use R9 as right value scratch register
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
         // Use R10 as left value scratch register
-        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
         as_.add_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit);
 
         // Store result to ROP
-        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+        as_.str_base_byteOff(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         break;
       }
@@ -435,14 +434,14 @@ void Frontend::parseCodeSection() {
 
         // Use R9 as right value scratch register
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
         // Use R10 as left value scratch register
-        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
         as_.sub_r_r_shiftR(REG::R9, REG::R10, REG::R9, is64bit);
 
         // Store result to ROP
-        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+        as_.str_base_byteOff(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         break;
       }
@@ -458,14 +457,14 @@ void Frontend::parseCodeSection() {
 
         // Use R9 as right value scratch register
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
         // Use R10 as left value scratch register
-        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
         as_.mul_r_r(REG::R9, REG::R10, REG::R9, is64bit);
 
         // Store result to ROP
-        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+        as_.str_base_byteOff(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         break;
       }
@@ -489,7 +488,7 @@ void Frontend::parseCodeSection() {
             bool const is64bit = currentFuncTypeInfo.results[0] == WasmType::I64;
             // prepare return value
             op.subROP(is64bit);
-            as_.ldr_base_off(REG::R0, REG::R28, 0U, is64bit);
+            as_.ldr_base_byteOff(REG::R0, REG::R28, 0U, is64bit);
           }
           if (stackUsage != 0U) {
             as_.inc_sp(stackUsage);
@@ -620,7 +619,7 @@ void Frontend::parseCodeSection() {
         StackElement const condition = stack_.pop();
         confirm(condition.isValue() && (!condition.isI64()), "condition must be i32 value type");
         op.subROP(false);
-        as_.ldr_base_off(REG::R9, ROP, 0U, false);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, false);
 
         as_.cmp_r_imm(REG::R9, 0U, false);
 
@@ -677,7 +676,7 @@ void Frontend::parseCodeSection() {
 
         // get divisor in R9
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0, is64bit);
         as_.cmp_r_imm(REG::R9, 0U, is64bit);
         Relpatch const notDiv0 = as_.prepareJmp(CC::NE);
         as_.setTrap(Trapcode::DIV_0);
@@ -686,7 +685,7 @@ void Frontend::parseCodeSection() {
         ///< If divisor is -1 and dividend is INT_MIN, it will trap with integer overflow
         // get dividend in R10
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
 
         // Is INT_MIN
         if (is64bit) {
@@ -717,7 +716,7 @@ void Frontend::parseCodeSection() {
         } else {
           as_.udiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
         }
-        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+        as_.str_base_byteOff(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
 
         break;
@@ -761,7 +760,7 @@ void Frontend::parseCodeSection() {
         confirm(condition.isValue() && (!condition.isI64()), "condition must be i32 value type");
         // pop the condition value at runtime
         op.subROP(false);
-        as_.ldr_base_off(REG::R9, ROP, 0U, false);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, false);
         as_.cmp_r_imm(REG::R9, 0U, false);
         labelManager.registerBr(true, targetElement.labelIndex, as_.getCurrentOffset());
         as_.prepare_b_cond(CC::NE);
@@ -785,10 +784,10 @@ void Frontend::parseCodeSection() {
         bool const is64bit = (opcode == OPCode::I64_CTZ);
         confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must be value type");
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
         as_.rBits_r_r(REG::R9, REG::R9, is64bit);
         as_.clz_r_r(REG::R9, REG::R9, is64bit);
-        as_.str_base_off(ROP, REG::R9, 0U, is64bit);
+        as_.str_base_byteOff(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
         // don't pop stack, since the ctz result is the same type element
         break;
@@ -801,9 +800,9 @@ void Frontend::parseCodeSection() {
         confirm(right.isI64() == is64bit, "must be value type");
         confirm(left.isI64() == is64bit, "must be value type");
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
 
         // prepare result as default true, unsigned left <= right
         REG const resultReg = REG::R11;
@@ -814,7 +813,7 @@ void Frontend::parseCodeSection() {
         // not LS(unsigned)
         as_.emit_mov_w_imm32(resultReg, 0);
         unsignedLessOrSame.linkToHere();
-        as_.str_base_off(ROP, resultReg, 0U, false);
+        as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
 
         stack_.push(StackElement{ElementType::I32});
@@ -827,7 +826,7 @@ void Frontend::parseCodeSection() {
         stack_.pop();
 
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
 
         REG const resultReg = REG::R10;
         // prepare default not zero, set 0 (if-else downgraded to if)
@@ -838,7 +837,7 @@ void Frontend::parseCodeSection() {
         // value is zero. Set true
         as_.emit_mov_w_imm32(resultReg, 1U);
         notZero.linkToHere();
-        as_.str_base_off(ROP, resultReg, 0U, false);
+        as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
 
         stack_.push(StackElement{ElementType::I32});
@@ -865,9 +864,9 @@ void Frontend::parseCodeSection() {
         confirm((right.isI64() == is64bit && left.isI64() == is64bit), "must match value type");
 
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
 
         REG const resultReg = REG::R11;
         // prepare default equal, set 1 (if-else downgraded to if)
@@ -878,7 +877,7 @@ void Frontend::parseCodeSection() {
         as_.emit_mov_w_imm32(resultReg, 0U);
         equal.linkToHere();
         // Store result to ROP
-        as_.str_base_off(ROP, resultReg, 0U, false);
+        as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
         stack_.push(StackElement{ElementType::I32});
         break;
@@ -891,9 +890,9 @@ void Frontend::parseCodeSection() {
         confirm((right.isI64() == is64bit && left.isI64() == is64bit), "must match value type");
 
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
         op.subROP(is64bit);
-        as_.ldr_base_off(REG::R10, ROP, 0U, is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
 
         REG const resultReg = REG::R11;
         // prepare default true (CC::HI for unsigned)
@@ -904,7 +903,7 @@ void Frontend::parseCodeSection() {
         as_.emit_mov_w_imm32(resultReg, 0U);
         higher.linkToHere();
         // Store result to ROP
-        as_.str_base_off(ROP, resultReg, 0U, false);
+        as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
         stack_.push(StackElement{ElementType::I32});
         break;
@@ -915,7 +914,7 @@ void Frontend::parseCodeSection() {
           auto const &param = funcBody.locals[i];
           confirm(param.isParam, "must be param");
           confirm(param.type == currentFuncTypeInfo.params[i], "param type should match the validation");
-          as_.str_base_off(REG::SP, static_cast<REG>(i), param.offset, param.type == WasmType::I64);
+          as_.str_base_byteOff(REG::SP, static_cast<REG>(i), param.offset, param.type == WasmType::I64);
         }
 
         uint32_t const callIndex{br_.readLEB128<uint32_t>()};
@@ -943,7 +942,7 @@ void Frontend::parseCodeSection() {
         REG const elementIndex = REG::R9;
         confirm(!stack_.pop().isI64(), "CALL_INDIRECT need one i32 element index");
         op.subROP(false);
-        as_.ldr_base_off(elementIndex, ROP, 0U, false);
+        as_.ldr_base_byteOff(elementIndex, ROP, 0U, false);
         // TRAP if elementIndex is not smaller than the length of tab.elem
         as_.cmp_r_imm(elementIndex, module_.numberElements, false);
         Relpatch const notOutOfRange = as_.prepareJmp(CC::LO);
@@ -986,9 +985,13 @@ void Frontend::parseCodeSection() {
         uint32_t const globalIndex{br_.readLEB128<uint32_t>()};
         confirm(globalIndex < module_.globalManager.size(), "global index out of range");
         auto const &globalInfo = module_.globalManager[globalIndex];
-        // need handle alignment for ldr and str with offset 8/4
-        as_.ldr_base_off(REG::R9, GLOBAL, globalInfo.offset, globalInfo.is64bit);
-        as_.str_base_off(ROP, REG::R9, 0U, globalInfo.is64bit);
+        if (globalInfo.isMutable) {
+          // global stored as 8 bytes aligned
+          as_.ldr_base_byteOff(REG::R9, GLOBAL, globalInfo.offset * sizeof(uint64_t), true);
+        } else {
+          as_.emit_mov_x_imm64(REG::R9, globalInfo.value);
+        }
+        as_.str_base_byteOff(ROP, REG::R9, 0U, globalInfo.is64bit);
         op.addROP(globalInfo.is64bit);
         stack_.push(StackElement{globalInfo.is64bit ? ElementType::I64 : ElementType::I32});
         break;
@@ -1000,8 +1003,9 @@ void Frontend::parseCodeSection() {
         confirm(globalInfo.isMutable, "global set must be mutable");
         confirm(stack_.pop().isI64() == globalInfo.is64bit, "global set value type should match the global type");
         op.subROP(globalInfo.is64bit);
-        as_.ldr_base_off(REG::R9, ROP, 0U, globalInfo.is64bit);
-        as_.str_base_off(GLOBAL, REG::R9, globalInfo.offset, globalInfo.is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, globalInfo.is64bit);
+        // global stored as 8 bytes aligned
+        as_.str_base_byteOff(GLOBAL, REG::R9, globalInfo.offset * sizeof(uint64_t), true);
         break;
       }
       case OPCode::UNREACHABLE:
@@ -1109,12 +1113,12 @@ void Frontend::prepareCallParams(ModuleInfo::TypeInfo const &callType, OP &op) {
     auto const &paramElement = stack_.pop();
     confirm(paramElement.isI64() == (callParams[regIndex] == WasmType::I64), "Parameter type mismatch");
     op.subROP(paramElement.isI64());
-    as_.ldr_base_off(static_cast<REG>(regIndex), ROP, 0, paramElement.isI64());
+    as_.ldr_base_byteOff(static_cast<REG>(regIndex), ROP, 0, paramElement.isI64());
   }
 }
 void Frontend::emitWasmCall(Storage const callFuncIndex) {
   // save current LR
-  as_.str_base_off(REG::SP, REG::LR, 0, true);
+  as_.str_base_byteOff(REG::SP, REG::LR, 0, true);
 
   // emit call
   // use R10 as scratch register for function pointer. R9 is used for function table base address
@@ -1124,14 +1128,14 @@ void Frontend::emitWasmCall(Storage const callFuncIndex) {
     as_.ldr_offReg(REG::R10, REG::R9, callFuncIndex.location_.reg, true);
   } else if (callFuncIndex.type_ == StorageType::CONSTANT) {
     // offset imm is byte
-    as_.ldr_base_off(REG::R10, REG::R9, callFuncIndex.location_.constUnion.u32 * sizeof(uintptr_t), true);
+    as_.ldr_base_byteOff(REG::R10, REG::R9, callFuncIndex.location_.constUnion.u32 * sizeof(uintptr_t), true);
   } else {
     confirm(false, "not supported yet");
   }
   as_.blr(REG::R10);
 
   // restore LR
-  as_.ldr_base_off(REG::LR, REG::SP, 0, true);
+  as_.ldr_base_byteOff(REG::LR, REG::SP, 0, true);
 }
 void Frontend::recoveryCurrentFrameReg(ModuleInfo::FunctionInfo const &funcBody, ModuleInfo::TypeInfo const &funcType) {
   // restore current function's params back to registers
@@ -1139,14 +1143,14 @@ void Frontend::recoveryCurrentFrameReg(ModuleInfo::FunctionInfo const &funcBody,
     auto const &param = funcBody.locals[i];
     confirm(param.isParam, "must be param");
     confirm(param.type == funcType.params[i], "param type should match the validation");
-    as_.ldr_base_off(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
+    as_.ldr_base_byteOff(static_cast<REG>(i), REG::SP, param.offset, param.type == WasmType::I64);
   }
 }
 void Frontend::handleReturnValue(ModuleInfo::TypeInfo const &funcType, OP &op) {
   // restore result in R0 if has return value
   if (funcType.results.size() == 1U) {
     bool const is64bit = (funcType.results[0] == WasmType::I64);
-    as_.str_base_off(ROP, REG::R0, 0U, is64bit);
+    as_.str_base_byteOff(ROP, REG::R0, 0U, is64bit);
     op.addROP(is64bit);
     // push the return value type to stack
     stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});

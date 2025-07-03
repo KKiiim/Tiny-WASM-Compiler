@@ -76,7 +76,6 @@ private:
 private:
   Compiler &compiler_;
   RuntimeBlock<uint8_t> operandStack_; ///< JIT runtime stack for simulate WASM operand stack
-  RuntimeBlock<uint8_t> globalMemory;  ///< JIT runtime global memory
 };
 
 #endif // SRC_COMMON_EXCEPTION_HPP

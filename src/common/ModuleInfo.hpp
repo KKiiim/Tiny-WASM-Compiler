@@ -87,7 +87,7 @@ public:
     bool is64bit;
     uint32_t offset; ///< Offset in global memory. Invalid if not mutable
     bool isMutable;
-    ConstUnion value; // if mutable, this is always the initial value
+    uint64_t value; // if mutable, this is always the initial value. Aligned to 8 bytes, u32 use low 4 bytes
   };
   std::vector<GlobalInfo> globalManager; ///< Global info by global index
 };

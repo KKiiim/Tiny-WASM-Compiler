@@ -61,7 +61,7 @@ void Runtime::initialize() {
   ///< Init X28 for operandStack
   as.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
   ///< Init X27 for global memory
-  as.emit_mov_x_imm64(GLOBAL, globalMemory.getStartAddr());
+  as.emit_mov_x_imm64(GLOBAL, compiler_.getGlobalMemoryStartAddress());
   as.ret();
   ExecutableMemory const &exec = as.getExecutableMemory();
   void (*const init)() = exec.data<void (*)()>();
