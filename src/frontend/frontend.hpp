@@ -61,6 +61,9 @@ public:
     Assembler &as_;
   };
 
+public:
+  uintptr_t nativeToJitWrapper{};
+
 private:
   void validateMagicNumber();
   void validateVersion();
@@ -77,6 +80,7 @@ private:
   void parseDataSection();
 
   void compile();
+  void genWrapperFunction();
 
 private:
   void emitWasmCall(Storage const callFuncIndex);
@@ -94,6 +98,7 @@ public:
   RuntimeBlock<uint32_t> elementIndexToFunctionIndex;      ///< 4bytes array by element index to function index
   RuntimeBlock<uint32_t> elementIndexToPureSignatureIndex; ///< 4bytes array by element index to pure function signature index
 
+  RuntimeBlock<uint8_t> operandStack_; ///< JIT runtime stack for simulate WASM operand stack
   RuntimeBlock<uint64_t> globalMemory; ///< JIT runtime global memory. u32 and u64 are aligned to 8 bytes to store
   RuntimeBlock<uint8_t> linearMemory;
 
