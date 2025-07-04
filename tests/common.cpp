@@ -24,23 +24,23 @@ void execTest(TestCase const &testCase, Runtime &runtime) {
     ret = runtime.callByName<void>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
                                    params[6], params[7]);
     if (testCase.commandType == Type::assert_trap) {
-      EXPECT_TRUE(ret.hasTrapped);
+      ASSERT_TRUE(ret.hasTrapped);
     }
   } else if (testCase.expected.ret[0].type == Type::i32) {
     ret = runtime.callByName<uint32_t>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
                                        params[6], params[7]);
     if (testCase.commandType == Type::assert_trap) {
-      EXPECT_TRUE(ret.hasTrapped);
+      ASSERT_TRUE(ret.hasTrapped);
     } else {
-      EXPECT_EQ(static_cast<uint32_t>(ret.returnValue), testCase.expected.ret[0].value32);
+      ASSERT_EQ(static_cast<uint32_t>(ret.returnValue), testCase.expected.ret[0].value32);
     }
   } else if (testCase.expected.ret[0].type == Type::i64) {
     ret = runtime.callByName<uint64_t>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
                                        params[6], params[7]);
     if (testCase.commandType == Type::assert_trap) {
-      EXPECT_TRUE(ret.hasTrapped);
+      ASSERT_TRUE(ret.hasTrapped);
     } else {
-      EXPECT_EQ(ret.returnValue, testCase.expected.ret[0].value64);
+      ASSERT_EQ(ret.returnValue, testCase.expected.ret[0].value64);
     }
   } else {
     confirm(false, "Expected only i32/i64 return value for now");
@@ -55,7 +55,6 @@ void execTestModule(TestModule const &module) {
   Compiler compiler;
   compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
   Runtime runtime{compiler};
-  runtime.initialize();
 
   LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
   for (const auto &testCase : module.testCases) {

@@ -10,7 +10,6 @@ set(WASM_COMPILER_INCLUDE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${WASM_COMPILER_INCLUDE_ROOT})
 
 set(CMAKE_CXX_CLANG_TIDY clang-tidy -p build --config-file ${CMAKE_CURRENT_LIST_DIR}/.clang-tidy "--header-filter=${CMAKE_CURRENT_LIST_DIR}/(src|tests)/.*")
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(NOT CMAKE_BUILD_TYPE)

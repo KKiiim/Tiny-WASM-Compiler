@@ -46,7 +46,7 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
       parseTableSection();
       break;
     case SectionType::MEMORY:
-      throw std::runtime_error("SectionType::MEMORY unsupported");
+      parseMemorySection();
       break;
     case SectionType::GLOBAL:
       parseGlobalSection();
@@ -64,10 +64,10 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
       parseCodeSection();
       break;
     case SectionType::DATA:
-      throw std::runtime_error("SectionType::DATA unsupported");
+      parseDataSection();
       break;
     case SectionType::DATA_COUNT:
-      throw std::runtime_error("SectionType::DATA_COUNT unsupported");
+      module_.dataCount = br_.readLEB128<uint32_t>();
       break;
     case SectionType::PLACEHOLDER:
       throw std::runtime_error("SectionType::PLACEHOLDER unsupported");
@@ -103,6 +103,36 @@ void Frontend::validateVersion() {
 
   if (moduleWasmVersion != supportedWasmVersion) {
     throw std::runtime_error("Wasm_Version_not_supported");
+  }
+}
+void Frontend::parseMemorySection() {
+  module_.memoryNumber = br_.readLEB128<uint32_t>();
+  confirm(module_.memoryNumber == 1U, "only support 1 memory yet");
+  for (uint32_t i = 0U; i < module_.memoryNumber; ++i) {
+    ModuleInfo::MemoryInfo memoryInfo{};
+    memoryInfo.hasLimit = br_.readByte<uint8_t>() == 1U;
+    memoryInfo.initialSize = br_.readLEB128<uint32_t>();
+    if (memoryInfo.hasLimit) {
+      memoryInfo.maximumSize = br_.readLEB128<uint32_t>();
+    }
+    module_.memoryInfos.push_back(memoryInfo);
+  }
+}
+void Frontend::parseDataSection() {
+  module_.numberDataSegments = br_.readLEB128<uint32_t>();
+  for (uint32_t i = 0U; i < module_.numberDataSegments; ++i) {
+    // data segment header
+    confirm(0U == br_.readLEB128<uint32_t>(), "segment flags assumed to be zero");
+    OPCode const type = br_.readByte<OPCode>();
+    uint32_t const value = br_.readLEB128<uint32_t>();
+    confirm((type == OPCode::I32_CONST && value == 0U), "others not supported yet");
+    confirm(br_.readByte<OPCode>() == OPCode::END, "must");
+
+    uint32_t const currentDataSegmentSize = br_.readLEB128<uint32_t>();
+    // data segment data
+    for (uint32_t j = 0U; j < currentDataSegmentSize; ++j) {
+      linearMemory.set(j, br_.readByte<uint8_t>());
+    }
   }
 }
 void Frontend::parseGlobalSection() {
@@ -1008,15 +1038,6 @@ void Frontend::parseCodeSection() {
         as_.str_base_byteOff(GLOBAL, REG::R9, globalInfo.offset, true);
         break;
       }
-      case OPCode::UNREACHABLE:
-      case OPCode::BR_TABLE:
-      case OPCode::REF_NULL:
-      case OPCode::REF_IS_NULL:
-      case OPCode::REF_FUNC:
-      case OPCode::SELECT:
-      case OPCode::SELECT_T:
-      case OPCode::TABLE_GET:
-      case OPCode::TABLE_SET:
       case OPCode::I32_LOAD:
       case OPCode::I64_LOAD:
       case OPCode::F32_LOAD:
@@ -1030,7 +1051,42 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_LOAD16_S:
       case OPCode::I64_LOAD16_U:
       case OPCode::I64_LOAD32_S:
-      case OPCode::I64_LOAD32_U:
+      case OPCode::I64_LOAD32_U: {
+        confirm((opcode != OPCode::F32_LOAD && opcode != OPCode::F64_LOAD), "float number not supported");
+        bool const needAlignment = br_.readByte<uint8_t>() == 1U;
+        uint32_t const loadOffset{br_.readLEB128<uint32_t>()};
+        confirm((!needAlignment && loadOffset == 0U), "offset not supported for now");
+
+        bool const is64bit =
+            (opcode == OPCode::I64_LOAD || opcode == OPCode::F64_LOAD || (opcode >= OPCode::I64_LOAD8_S && opcode <= OPCode::I64_LOAD32_U));
+        constexpr auto loadSizeArray = make_array(4U, 8U, 4U, 8U, 1U, 1U, 2U, 2U, 1U, 1U, 2U, 2U, 4U, 4U);
+        uint32_t const loadSize = loadSizeArray[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_LOAD)];
+
+        confirm(opcode == OPCode::I32_LOAD8_U, "only I32_LOAD8_U supported for now");
+
+        confirm(!stack_.pop().isI64(), "offset must be i32 value type");
+        op.subROP(false);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, false);
+        REG const getDataReg = REG::R10;
+        as_.emit_mov_x_imm64(LinMem, linearMemory.getStartAddr());
+        if (loadSize == 1U) {
+          // data is ZeroExtend
+          as_.ldrb_uReg(getDataReg, LinMem, REG::R9);
+        }
+        as_.str_base_byteOff(ROP, getDataReg, 0U, is64bit);
+        op.addROP(is64bit);
+        stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
+        break;
+      }
+      case OPCode::UNREACHABLE:
+      case OPCode::BR_TABLE:
+      case OPCode::REF_NULL:
+      case OPCode::REF_IS_NULL:
+      case OPCode::REF_FUNC:
+      case OPCode::SELECT:
+      case OPCode::SELECT_T:
+      case OPCode::TABLE_GET:
+      case OPCode::TABLE_SET:
       case OPCode::I32_STORE:
       case OPCode::I64_STORE:
       case OPCode::F32_STORE:

@@ -26,8 +26,6 @@ public:
   std::string getTrapCode() const;
   std::string getTrapMessage() const;
 
-  void initialize();
-
   struct CallReturn {
     bool hasTrapped{false};
     uint64_t returnValue{};
@@ -52,7 +50,7 @@ public:
     LOG_DEBUG << "status=" << status << LOG_END;
     if (status == 0) {
       ///< Normal call
-
+      initialize();
       ///< if-constexpr only supported after C++17
       if constexpr (!std::is_void<TRet>::value) {
         // if (signature[0] != '(') {
@@ -70,6 +68,7 @@ public:
   }
 
 private:
+  void initialize();
   void registerSignalHandler() const;
   void unregisterSignalHandler() const;
 

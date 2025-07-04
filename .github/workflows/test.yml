@@ -36,9 +36,11 @@ jobs:
       - name: gen test case
         run: |
           mkdir -p tests/testcases/tmp/ 
-          for wast_file in tests/testcases/*.wast; do
-            json_file="tests/testcases/tmp/$(basename "$wast_file" .wast).json"
-            wast2json "$wast_file" --output="$json_file"
+          for wast in tests/testcases/*.wast; do
+              wast2json "$wast" -o "tests/testcases/tmp/$(basename "$wast" .wast).json"
+          done
+          for wasm in tests/testcases/tmp/*.wasm; do
+              wasm2wat "$wasm" -o "${wasm%.wasm}.wat"
           done
 
       - name: run spec test

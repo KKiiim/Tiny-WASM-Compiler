@@ -78,6 +78,13 @@ TEST(Chapter10, global) {
     execTestModule(module);
   }
 }
+TEST(Chapter11, data) {
+  JsonReader const jsonReader("tests/testcases/tmp/data.json");
+  LOG_YELLOW << ConsoleYellow << "Testing data.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
 
 //////////////////////////////////////////////
 /////////////Optional Spec Test///////////////
@@ -96,7 +103,13 @@ TEST(OptTest, i64) {
     execTestModule(module);
   }
 }
-
+TEST(OptTest, nop) {
+  JsonReader const jsonReader("tests/testcases/tmp/opt_nop.json");
+  LOG_YELLOW << ConsoleYellow << "Testing opt_nop.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
 //////////////////////////////////////////////
 ///< Demo: test cases with hardcoded input params
 
