@@ -14,6 +14,7 @@ int main(int argc, char *argv[]) {
 
   {
     Runtime runtime{compiler};
+    runtime.initialize();
 
     Runtime::CallReturn const ret = runtime.callByName<uint32_t>("div_s", "i(ii)", 0, 0);
     if (ret.hasTrapped) {

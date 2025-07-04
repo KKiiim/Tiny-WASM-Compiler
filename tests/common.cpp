@@ -55,6 +55,7 @@ void execTestModule(TestModule const &module) {
   Compiler compiler;
   compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
   Runtime runtime{compiler};
+  runtime.initialize();
 
   LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
   for (const auto &testCase : module.testCases) {
