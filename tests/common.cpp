@@ -15,20 +15,20 @@ void execTest(TestCase const &testCase, Runtime &runtime) {
   confirm(testCase.action.actionType == Type::invoke, "Expected action type to be invoke");
 
   // [ref: doc-design]
-  std::array<uint64_t, MaxParamsForWasmFunction> params{0, 0, 0, 0, 0, 0, 0, 0};
+  std::array<uint64_t, MaxParamsForWasmFunction> params{0, 0, 0, 0, 0, 0, 0};
   testCase.setParams(params);
   auto const &signature = testCase.getSignature();
 
   Runtime::CallReturn ret{};
   if (testCase.expected.ret.empty()) {
     ret = runtime.callByName<void>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
-                                   params[6], params[7]);
+                                   params[6]);
     if (testCase.commandType == Type::assert_trap) {
       ASSERT_TRUE(ret.hasTrapped);
     }
   } else if (testCase.expected.ret[0].type == Type::i32) {
     ret = runtime.callByName<uint32_t>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
-                                       params[6], params[7]);
+                                       params[6]);
     if (testCase.commandType == Type::assert_trap) {
       ASSERT_TRUE(ret.hasTrapped);
     } else {
@@ -36,7 +36,7 @@ void execTest(TestCase const &testCase, Runtime &runtime) {
     }
   } else if (testCase.expected.ret[0].type == Type::i64) {
     ret = runtime.callByName<uint64_t>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
-                                       params[6], params[7]);
+                                       params[6]);
     if (testCase.commandType == Type::assert_trap) {
       ASSERT_TRUE(ret.hasTrapped);
     } else {
@@ -55,7 +55,6 @@ void execTestModule(TestModule const &module) {
   Compiler compiler;
   compiler.compile("tests/testcases/tmp/" + module.moduleFileName);
   Runtime runtime{compiler};
-  runtime.initialize();
 
   LOG_YELLOW << ConsoleYellow << "Testing module " << module.moduleFileName << LOG_END;
   for (const auto &testCase : module.testCases) {

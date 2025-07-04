@@ -24,6 +24,8 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
   validateVersion();
   LOG_DEBUG << "validate success" << LOG_END;
 
+  genWrapperFunction();
+
   while (br_.hasNextByte()) {
     SectionType const sectionType{br_.readByte<SectionType>()};
     uint32_t const sectionSize{br_.readLEB128<uint32_t>()}; // FIXME(): ignore invalid size check
@@ -105,6 +107,23 @@ void Frontend::validateVersion() {
     throw std::runtime_error("Wasm_Version_not_supported");
   }
 }
+
+void Frontend::genWrapperFunction() {
+  nativeToJitWrapper = as_.getCurrentAbsAddress();
+
+  as_.dec_sp(8U); // reserve 8 bytes for return address(LR)
+  ///< Init X28(ROP) for operandStack
+  as_.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
+  ///< Init X27(GLOBAL) for global memory
+  as_.emit_mov_x_imm64(GLOBAL, globalMemory.getStartAddr());
+  ///< Init X26(LinMem) for linear memory
+  as_.emit_mov_x_imm64(LinMem, linearMemory.getStartAddr());
+  Storage const functionIndexReg{REG::R7};
+  emitWasmCall(functionIndexReg);
+  as_.inc_sp(8U);
+  as_.ret();
+}
+
 void Frontend::parseMemorySection() {
   module_.memoryNumber = br_.readLEB128<uint32_t>();
   confirm(module_.memoryNumber == 1U, "only support 1 memory yet");

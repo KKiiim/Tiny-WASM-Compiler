@@ -26,8 +26,6 @@ public:
   std::string getTrapCode() const;
   std::string getTrapMessage() const;
 
-  void initialize();
-
   struct CallReturn {
     bool hasTrapped{false};
     uint64_t returnValue{};
@@ -56,10 +54,10 @@ public:
       ///< if-constexpr only supported after C++17
       if constexpr (!std::is_void<TRet>::value) {
         // if (signature[0] != '(') {
-        TRet const v = compiler_.singleCallByIndex<TRet>(functionIndex, std::forward<Args>(args)...);
+        TRet const v = compiler_.singleCallWithIndex<TRet>(std::forward<Args>(args)..., functionIndex);
         ret.returnValue = static_cast<uint64_t>(v);
       } else {
-        compiler_.singleCallByIndex<void>(functionIndex, std::forward<Args>(args)...);
+        compiler_.singleCallWithIndex<void>(std::forward<Args>(args)..., functionIndex);
         ret.returnValue = 0; // No return value for void functions
       }
     }
@@ -75,7 +73,6 @@ private:
 
 private:
   Compiler &compiler_;
-  RuntimeBlock<uint8_t> operandStack_; ///< JIT runtime stack for simulate WASM operand stack
 };
 
 #endif // SRC_COMMON_EXCEPTION_HPP

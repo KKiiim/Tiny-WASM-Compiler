@@ -11,8 +11,7 @@ Params with hardcode cast type for `singleCallByName`.
 
 ##### In Spec test
 
-    Use static 8 64bits regiters for C++ call wasm. In wasm, fetch the needed size from register.
-    Because it is not possible to do dynamic type distribution at compile time in C++.
+    Use static 7 64bits regiters(R0~R6) for C++ call wasm, R7 for called export function index. In wasm, fetch the needed size from register. Because it is not possible to do dynamic type distribution at compile time in C++.
 
 ### OPCode::IF ELSE
 

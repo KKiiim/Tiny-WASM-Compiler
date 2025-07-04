@@ -55,23 +55,6 @@ void Runtime::unregisterSignalHandler() const {
   }
 }
 
-void Runtime::initialize() {
-  // FIXME: should init in same jit code
-  Assembler as{}; // temporary emitter
-
-  ///< Init X28(ROP) for operandStack
-  as.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
-  ///< Init X27(GLOBAL) for global memory
-  as.emit_mov_x_imm64(GLOBAL, compiler_.getGlobalMemoryStartAddress());
-  ///< Init X29(LinMem) for linear memory
-  as.emit_mov_x_imm64(LinMem, compiler_.getLinearMemoryStartAddress());
-  as.ret();
-  ExecutableMemory const &exec = as.getExecutableMemory();
-  void (*const init)() = exec.data<void (*)()>();
-  // FIXME: Maybe dangerous, since we don't know what happened between init and first function call
-  init();
-}
-
 std::string Runtime::getTrapCode() const {
   Trapcode const trapcode = static_cast<Trapcode>(globalTrapcode);
   if (trapcode == Trapcode::NONE) {
