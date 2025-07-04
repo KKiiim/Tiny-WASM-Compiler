@@ -1,3 +1,4 @@
+#include <cinttypes>
 #include <cstdint>
 
 #include "aarch64Assembler.hpp"
@@ -74,6 +75,26 @@ void Assembler::ldr_offReg(REG const destReg, REG const addrReg, REG const offse
   opcode |= (static_cast<OPCodeTemplate>(offsetReg) << 16U);
   opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
   opcode |= static_cast<OPCodeTemplate>(destReg);
+  append(opcode);
+}
+void Assembler::ldrb_uimm(REG const destReg, REG const addrReg, uint32_t const uimm) {
+  // 0011 1001 01 imm12 Rn Rt
+  // 39400000
+  confirm(uimm <= 0xFFF, "Immediate out of range");
+  OPCodeTemplate opcode = 0x39400000;
+  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U); // addr 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);         // dest 0-4
+  opcode |= (uimm & 0xFFFU) << 10U;                       // imm12
+  append(opcode);
+}
+void Assembler::ldrb_uReg(REG const destReg, REG const addrReg, REG const offsetReg) {
+  // 0011 1000 011 Rm option(011 shift-mode) S(0) 10 Rn Rt
+  // 38606800
+  // no shift
+  OPCodeTemplate opcode = 0x38606800;                        // LDRB (register offset)
+  opcode |= (static_cast<OPCodeTemplate>(offsetReg) << 16U); // source 16-20
+  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);    // addr 5-9
+  opcode |= static_cast<OPCodeTemplate>(destReg);            // dest 0-4
   append(opcode);
 }
 void Assembler::add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit) {

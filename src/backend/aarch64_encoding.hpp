@@ -26,6 +26,8 @@ constexpr uint32_t totalNumRegs{static_cast<uint32_t>(REG::NUMREGS)}; ///< Total
 static constexpr const REG ROP = REG::R28;
 // R27 points to the start of global memory
 static constexpr const REG GLOBAL = REG::R27;
+// R26 points to base of linear memory
+static constexpr const REG LinMem = REG::R26;
 ///////////////////////////////////////////////////////////////////
 
 namespace RegUtil {

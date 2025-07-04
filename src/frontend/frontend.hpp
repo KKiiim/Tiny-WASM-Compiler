@@ -73,6 +73,9 @@ private:
   void parseTableSection();
   void parseGlobalSection();
 
+  void parseMemorySection();
+  void parseDataSection();
+
   void compile();
 
 private:
@@ -92,6 +95,7 @@ public:
   RuntimeBlock<uint32_t> elementIndexToPureSignatureIndex; ///< 4bytes array by element index to pure function signature index
 
   RuntimeBlock<uint64_t> globalMemory; ///< JIT runtime global memory. u32 and u64 are aligned to 8 bytes to store
+  RuntimeBlock<uint8_t> linearMemory;
 
 private:
   BytecodeReader br_;

@@ -27,3 +27,5 @@ pimm
 relpatch
 UXTW
 immr
+ldrb
+LDRB

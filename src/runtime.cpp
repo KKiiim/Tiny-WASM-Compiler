@@ -56,12 +56,15 @@ void Runtime::unregisterSignalHandler() const {
 }
 
 void Runtime::initialize() {
+  // FIXME: should init in same jit code
   Assembler as{}; // temporary emitter
 
   ///< Init X28(ROP) for operandStack
   as.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
   ///< Init X27(GLOBAL) for global memory
   as.emit_mov_x_imm64(GLOBAL, compiler_.getGlobalMemoryStartAddress());
+  ///< Init X29(LinMem) for linear memory
+  as.emit_mov_x_imm64(LinMem, compiler_.getLinearMemoryStartAddress());
   as.ret();
   ExecutableMemory const &exec = as.getExecutableMemory();
   void (*const init)() = exec.data<void (*)()>();

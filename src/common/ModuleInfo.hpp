@@ -60,14 +60,18 @@ public:
 
   std::vector<NameInfo> names_;
 
+  ////////////
   ///< Table
+  ////////////
   bool hasTable = false;
   bool tableHasSizeLimit = false;
   uint32_t numberElements{};
   uint32_t tableInitialSize{};
   uint32_t tableMaximumSize{};
 
+  ////////////
   ///< Call
+  ////////////
   /// @brief 1-1 Map from string view function signature to pure signature index
   class SignatureMap {
   public:
@@ -82,7 +86,9 @@ public:
 
   SignatureMap signatureStringToPureSigIndex; // 1-1 mapping
 
+  ////////////
   ///< Global
+  ////////////
   struct GlobalInfo {
     bool is64bit;
     uint32_t offset; ///< Offset in global memory. Invalid if not mutable
@@ -90,6 +96,20 @@ public:
     uint64_t value; // if mutable, this is always the initial value. Aligned to 8 bytes, u32 use low 4 bytes
   };
   std::vector<GlobalInfo> globalManager; ///< Global info by global index
+
+  ////////////
+  ///< Memory
+  ////////////
+  uint32_t memoryNumber{0U};
+  struct MemoryInfo {
+    bool hasLimit;
+    uint32_t initialSize; ///< in pages
+    uint32_t maximumSize; ///< in pages, 0 means no limit
+  };
+  std::vector<MemoryInfo> memoryInfos;
+
+  uint32_t dataCount{0U};
+  uint32_t numberDataSegments{0U};
 };
 
 #endif
