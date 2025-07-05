@@ -28,12 +28,12 @@ extern "C" void signal_handler(int sig, siginfo_t *info, void *ucontext) {
     ucontext_t const *const ctx = static_cast<ucontext_t *>(ucontext);
     // Default use R0 to store trap code
     globalTrapcode = ctx->uc_mcontext.regs[0];
+    siglongjmp(globalTrapEnv, 0);
   } else {
     globalTrapcode = static_cast<uint32_t>(Trapcode::NONE);
     LOG_ERROR << "Unexpected signal: " << sig << " with code: " << info->si_code << LOG_END;
+    std::terminate(); // Cleanly terminate the program for unexpected signals
   }
-
-  siglongjmp(globalTrapEnv, 0);
 }
 
 void Runtime::registerSignalHandler() const {

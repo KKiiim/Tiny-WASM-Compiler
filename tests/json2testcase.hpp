@@ -15,7 +15,7 @@ enum class Type : uint8_t {
   module,
   assert_return,
   assert_trap,
-  assert_exhaustion,
+  assert_exhaustion, // alias for assert_trap yet for test stack overflow spec test
 
   // action type
   invoke,

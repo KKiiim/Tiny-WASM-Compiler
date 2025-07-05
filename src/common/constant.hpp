@@ -7,7 +7,7 @@
 
 constexpr const uint32_t DefaultPageSize = 4 * 1024; // 4 KB
 constexpr const uint32_t MaxParamsForWasmFunction = 7U;
-uint32_t const stackGuardSize{64 * 1024}; // 64KB stack guard size
+constexpr const uint32_t stackGuardSize = 64 * 1024; // 64KB stack guard size
 
 enum Trapcode : uint32_t {
   NONE = 0,
