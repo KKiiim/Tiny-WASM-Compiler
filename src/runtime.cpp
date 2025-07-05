@@ -7,7 +7,6 @@
 
 #include "runtime.hpp"
 
-#include "src/backend/aarch64_encoding.hpp"
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
 #include "src/common/util.hpp"
@@ -24,17 +23,17 @@ Runtime::~Runtime() {
 }
 
 extern "C" void signal_handler(int sig, siginfo_t *info, void *ucontext) {
-  if (sig != SIGTRAP || info->si_code != TRAP_BRKPT) {
+  if (sig == SIGTRAP && info->si_code == TRAP_BRKPT) {
+    LOG_DEBUG << "Signal handler triggered with brkAddress: " << static_cast<uint64_t>(bit_cast<uintptr_t>(info->si_addr)) << LOG_END;
+    ucontext_t const *const ctx = static_cast<ucontext_t *>(ucontext);
+    // Default use R0 to store trap code
+    globalTrapcode = ctx->uc_mcontext.regs[0];
+    siglongjmp(globalTrapEnv, 0);
+  } else {
+    globalTrapcode = static_cast<uint32_t>(Trapcode::NONE);
     LOG_ERROR << "Unexpected signal: " << sig << " with code: " << info->si_code << LOG_END;
-    return;
+    std::terminate(); // Cleanly terminate the program for unexpected signals
   }
-  LOG_DEBUG << "Signal handler triggered with brkAddress: " << static_cast<uint64_t>(bit_cast<uintptr_t>(info->si_addr)) << LOG_END;
-  ucontext_t const *const ctx = static_cast<ucontext_t *>(ucontext);
-  // Default use R0 to store trap code
-  globalTrapcode = ctx->uc_mcontext.regs[0];
-  LOG_DEBUG << "Trap code: " << globalTrapcode << LOG_END;
-
-  siglongjmp(globalTrapEnv, 0);
 }
 
 void Runtime::registerSignalHandler() const {
@@ -43,7 +42,7 @@ void Runtime::registerSignalHandler() const {
   sa.sa_flags = SA_SIGINFO;
   sigemptyset(&sa.sa_mask);
   if (sigaction(SIGTRAP, &sa, nullptr) == -1) {
-    LOG_ERROR << "Failed to register signal handler: " << strerror(errno) << LOG_END;
+    LOG_ERROR << "Failed to register SIGTRAP: " << strerror(errno) << LOG_END;
   }
 }
 void Runtime::unregisterSignalHandler() const {
@@ -51,7 +50,7 @@ void Runtime::unregisterSignalHandler() const {
   sa.sa_sigaction = nullptr;
   sigemptyset(&sa.sa_mask);
   if (sigaction(SIGTRAP, &sa, nullptr) == -1) {
-    LOG_ERROR << "Failed to register signal handler: " << strerror(errno) << LOG_END;
+    LOG_ERROR << "Failed to unregister SIGTRAP: " << strerror(errno) << LOG_END;
   }
 }
 
@@ -73,6 +72,7 @@ std::string Runtime::getTrapMessage() const {
       "Integer overflow",            // Trapcode 2
       "undefined element",           // Trapcode 3
       "indirect call type mismatch", // Trapcode 4
+      "call stack exhausted",        // Trapcode 5
   };
   return trapMessages[globalTrapcode];
 }

@@ -111,16 +111,20 @@ void Frontend::validateVersion() {
 void Frontend::genWrapperFunction() {
   nativeToJitWrapper = as_.getCurrentAbsAddress();
 
-  as_.dec_sp(8U); // reserve 8 bytes for return address(LR)
   ///< Init X28(ROP) for operandStack
   as_.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
   ///< Init X27(GLOBAL) for global memory
   as_.emit_mov_x_imm64(GLOBAL, globalMemory.getStartAddr());
   ///< Init X26(LinMem) for linear memory
   as_.emit_mov_x_imm64(LinMem, linearMemory.getStartAddr());
+  ///< Init X25 for stack guard
+  as_.emit_mov_x_imm64(StackGuard, stackGuardSize);
+  as_.sub_r_r_immReg(StackGuard, REG::SP, StackGuard, true);
+
+  as_.dec_sp(16U); // reserve 8 bytes(align to 16) for return address(LR)
   Storage const functionIndexReg{REG::R7};
   emitWasmCall(functionIndexReg);
-  as_.inc_sp(8U);
+  as_.inc_sp(16U);
   as_.ret();
 }
 
