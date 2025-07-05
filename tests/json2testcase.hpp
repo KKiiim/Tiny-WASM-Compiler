@@ -15,6 +15,7 @@ enum class Type : uint8_t {
   module,
   assert_return,
   assert_trap,
+  assert_exhaustion,
 
   // action type
   invoke,

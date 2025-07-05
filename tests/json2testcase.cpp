@@ -41,7 +41,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
       TestModule module;
       module.moduleFileName = command["filename"].get<std::string>();
       modules_.push_back(std::move(module));
-    } else if ((commandType == "assert_return") || (commandType == "assert_trap")) {
+    } else if ((commandType == "assert_return") || (commandType == "assert_trap") || (commandType == "assert_exhaustion")) {
       TestCase testcase;
       testcase.line = command["line"].get<uint32_t>();
 
@@ -67,9 +67,9 @@ JsonReader::JsonReader(const std::string &jsonPath) {
 
       if (commandType == "assert_return") {
         testcase.commandType = Type::assert_return;
-      } else { // assert_trap
+      } else { // assert_trap / assert_exhaustion
         testcase.commandType = Type::assert_trap;
-        confirm(command.contains("text"), "assert_trap should has text");
+        confirm(command.contains("text"), "assert_trap / assert_trap should has text");
         confirm(command["text"].is_string(), "Expected text to be string");
         testcase.text = command["text"].get<std::string>();
       }
@@ -78,7 +78,6 @@ JsonReader::JsonReader(const std::string &jsonPath) {
       testcase.action = std::move(action);
       testcase.expected = std::move(expectedParam);
       modules_[modules_.size() - 1].testCases.push_back(std::move(testcase));
-    } else if (commandType == "assert_trap") {
     } else {
       LOG_ERROR << "Unknown command type: " << commandType << LOG_END;
       continue; // Skip unknown command types
@@ -88,7 +87,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
 
 void JsonReader::dump() const {
   static std::array<std::string, static_cast<size_t>(Type::NONE) + 1U> typeNames = {
-      "module", "assert_return", "invoke", "i32", "i64", "NONE",
+      "module", "assert_return", "assert_trap", "assert_exhaustion", "invoke", "i32", "i64", "NONE",
   };
   for (const auto &module : modules_) {
     LOG_INFO << "Module: " << module.moduleFileName << LOG_END;

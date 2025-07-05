@@ -158,10 +158,11 @@ void Assembler::sub_r_r_imm(REG const destReg, REG const srcReg, uint32_t const 
   opcode |= (imm & 0xFFFU) << 10U;
   append(opcode);
 }
-void Assembler::sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg) {
-  confirm(false, "not implemented");
+void Assembler::sub_r_r_immReg(REG const destReg, REG const srcReg, REG const immReg, bool const is64bit) {
+  // sf 100 1011 001 Rm option(011) immShift(3) Rn Rd
+  // 4B206000
 
-  OPCodeTemplate opcode = 0x4B000000; // SUB Xd, Xn, Xm
+  OPCodeTemplate opcode = is64bit ? 0xCB206000 : 0x4B206000; // SUB Xd, Xn, Xm
   opcode |= (static_cast<OPCodeTemplate>(srcReg) << 5U);
   opcode |= static_cast<OPCodeTemplate>(destReg);
   opcode |= (static_cast<OPCodeTemplate>(immReg) << 16U);
@@ -181,10 +182,16 @@ void Assembler::sub_r_r_shiftR(REG const destReg, REG const firstSrcReg, REG con
   append(opcode);
 }
 void Assembler::inc_sp(uint32_t const imm) {
-  return add_r_r_imm(REG::SP, REG::SP, imm, true);
+  add_r_r_imm(REG::SP, REG::SP, imm, true);
 }
 void Assembler::dec_sp(uint32_t const imm) {
-  return sub_r_r_imm(REG::SP, REG::SP, imm, true);
+  sub_r_r_imm(REG::R9, REG::SP, imm, true);
+  cmp_r_r(REG::R9, StackGuard, true);
+  Relpatch const notStackOverflow = prepareJmp(CC::HI);
+  setTrap(Trapcode::Stack_overflow);
+  notStackOverflow.linkToHere();
+  // if SP > StackGuard, continue, update SP
+  sub_r_r_imm(REG::SP, REG::SP, imm, true);
 }
 void Assembler::mov_r_r(REG const destReg, REG const srcReg, bool const is64bit) {
   // sf 010 1010 000 Rm 000000 11111 Rd

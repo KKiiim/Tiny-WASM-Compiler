@@ -85,6 +85,13 @@ TEST(Chapter11, data) {
     execTestModule(module);
   }
 }
+TEST(Chapter13, stack_overflow) {
+  JsonReader const jsonReader("tests/testcases/tmp/stack_overflow.json");
+  LOG_YELLOW << ConsoleYellow << "Testing stack_overflow.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
 
 //////////////////////////////////////////////
 /////////////Optional Spec Test///////////////
