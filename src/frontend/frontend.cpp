@@ -735,35 +735,40 @@ void Frontend::parseCodeSection() {
         as_.setTrap(Trapcode::DIV_0);
         notDiv0.linkToHere();
         ///< Divisor is not zero, continue to do division
-        ///< If divisor is -1 and dividend is INT_MIN, it will trap with integer overflow
         // get dividend in R10
         op.subROP(is64bit);
         as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
 
-        // Is INT_MIN
-        if (is64bit) {
-          as_.emit_mov_x_imm64(REG::R11, 0x8000000000000000);
-          as_.cmp_r_r(REG::R10, REG::R11, true);
-        } else {
-          as_.emit_mov_w_imm32(REG::R11, 0x80000000);
-          as_.cmp_r_r(REG::R10, REG::R11, false);
-        }
-        Relpatch const notIntMin = as_.prepareJmp(CC::NE);
+        bool const isSigned = (opcode == OPCode::I32_DIV_S || opcode == OPCode::I64_DIV_S);
+        ///< If divisor is -1 and dividend is INT_MIN, sign div will trap with integer overflow
+        if (isSigned) {
+          // check if dividend is INT_MIN
+          if (is64bit) {
+            as_.emit_mov_x_imm64(REG::R11, 0x8000000000000000);
+            as_.cmp_r_r(REG::R10, REG::R11, true);
+          } else {
+            as_.emit_mov_w_imm32(REG::R11, 0x80000000);
+            as_.cmp_r_r(REG::R10, REG::R11, false);
+          }
+          Relpatch const notIntMin = as_.prepareJmp(CC::NE);
 
-        // Is -1
-        if (is64bit) {
-          as_.emit_mov_x_imm64(REG::R11, static_cast<uint64_t>(-1));
-          as_.cmp_r_r(REG::R9, REG::R11, true);
-        } else {
-          as_.emit_mov_w_imm32(REG::R11, static_cast<uint32_t>(-1));
-          as_.cmp_r_r(REG::R9, REG::R11, false);
-        }
-        Relpatch const notMinusOne = as_.prepareJmp(CC::NE);
-        as_.setTrap(Trapcode::Integer_overflow);
+          // Then check if divisor is -1
+          // If divisor is -1, it will trap with integer overflow
+          if (is64bit) {
+            as_.emit_mov_x_imm64(REG::R11, static_cast<uint64_t>(-1));
+            as_.cmp_r_r(REG::R9, REG::R11, true);
+          } else {
+            as_.emit_mov_w_imm32(REG::R11, static_cast<uint32_t>(-1));
+            as_.cmp_r_r(REG::R9, REG::R11, false);
+          }
+          Relpatch const notMinusOne = as_.prepareJmp(CC::NE);
+          as_.setTrap(Trapcode::Integer_overflow);
 
-        notIntMin.linkToHere();
-        notMinusOne.linkToHere();
-        // safe division
+          notIntMin.linkToHere();
+          notMinusOne.linkToHere();
+        }
+
+        ///< Safe division
         if (opcode == OPCode::I32_DIV_S || opcode == OPCode::I64_DIV_S) {
           as_.sdiv_r_r(REG::R9, REG::R10, REG::R9, is64bit);
         } else {

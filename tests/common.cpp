@@ -23,31 +23,33 @@ void execTest(TestCase const &testCase, Runtime &runtime) {
   if (testCase.expected.ret.empty()) {
     ret = runtime.callByName<void>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
                                    params[6]);
-    if (testCase.commandType == Type::assert_trap) {
-      ASSERT_TRUE(ret.hasTrapped);
-    }
   } else if (testCase.expected.ret[0].type == Type::i32) {
     ret = runtime.callByName<uint32_t>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
                                        params[6]);
-    if (testCase.commandType == Type::assert_trap) {
-      ASSERT_TRUE(ret.hasTrapped);
-    } else {
+    if (testCase.commandType == Type::assert_return) {
       ASSERT_EQ(static_cast<uint32_t>(ret.returnValue), testCase.expected.ret[0].value32);
     }
   } else if (testCase.expected.ret[0].type == Type::i64) {
     ret = runtime.callByName<uint64_t>(testCase.action.functionName, signature, params[0], params[1], params[2], params[3], params[4], params[5],
                                        params[6]);
-    if (testCase.commandType == Type::assert_trap) {
-      ASSERT_TRUE(ret.hasTrapped);
-    } else {
+    if (testCase.commandType == Type::assert_return) {
       ASSERT_EQ(ret.returnValue, testCase.expected.ret[0].value64);
     }
   } else {
     confirm(false, "Expected only i32/i64 return value for now");
   }
-  if (ret.hasTrapped) {
-    LOG_INFO << "Exception: " << runtime.getTrapMessage() << LOG_END;
+
+  if (testCase.commandType == Type::assert_trap) {
+    ///< Check if current test trapped
+    ASSERT_TRUE(ret.hasTrapped);
+    std::string const &trapMessage = trapcodeString.at(runtime.getTrapCode());
+    ///< Check if the trap message matches the expected text
+    ASSERT_EQ(trapMessage, testCase.text);
+    LOG_INFO << "Exception: " << trapMessage << LOG_END;
+  } else {
+    ASSERT_FALSE(ret.hasTrapped);
   }
+
   LOG_GREEN << "Test case passed: " << testCase.action.functionName << " with signature: " << signature << LOG_END;
 }
 

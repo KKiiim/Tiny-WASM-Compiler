@@ -19,10 +19,10 @@ enum Trapcode : uint32_t {
 };
 const std::unordered_map<Trapcode, std::string> trapcodeString{
     {Trapcode::NONE, "NONE"},
-    {Trapcode::DIV_0, "DIV_0"},
-    {Trapcode::Integer_overflow, "Integer_overflow"},
-    {Trapcode::TableElement_out_of_range, "TableElement_out_of_range"},
-    {Trapcode::IndirectCall_signature_mismatch, "IndirectCall_signature_mismatch"},
-    {Trapcode::Stack_overflow, "Stack_overflow"},
+    {Trapcode::DIV_0, "integer divide by zero"},
+    {Trapcode::Integer_overflow, "integer overflow"},
+    {Trapcode::TableElement_out_of_range, "undefined element"},
+    {Trapcode::IndirectCall_signature_mismatch, "indirect call type mismatch"},
+    {Trapcode::Stack_overflow, "call stack exhausted"},
 };
 #endif

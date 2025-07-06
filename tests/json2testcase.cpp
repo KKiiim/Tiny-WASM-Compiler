@@ -87,7 +87,7 @@ JsonReader::JsonReader(const std::string &jsonPath) {
 
 void JsonReader::dump() const {
   static std::array<std::string, static_cast<size_t>(Type::NONE) + 1U> typeNames = {
-      "module", "assert_return", "assert_trap", "assert_exhaustion", "invoke", "i32", "i64", "NONE",
+      "module", "assert_return", "assert_trap", "invoke", "i32", "i64", "NONE",
   };
   for (const auto &module : modules_) {
     LOG_INFO << "Module: " << module.moduleFileName << LOG_END;

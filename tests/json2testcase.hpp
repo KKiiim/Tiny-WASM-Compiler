@@ -15,7 +15,7 @@ enum class Type : uint8_t {
   module,
   assert_return,
   assert_trap,
-  assert_exhaustion, // alias for assert_trap yet for test stack overflow spec test
+  // assert_exhaustion only alias for assert_trap yet for test stack overflow spec test
 
   // action type
   invoke,
@@ -58,7 +58,7 @@ public:
   uint32_t line{0U};
   Action action;
   Expected expected;
-  std::string text; ///< If is assert_trap type, this is the trap message
+  std::string text; ///< If is assert_trap/exhaustion type, this is the trap message
 
   std::string getSignature() const;
   void setParams(std::array<uint64_t, MaxParamsForWasmFunction> &params) const;
