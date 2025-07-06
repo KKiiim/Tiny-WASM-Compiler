@@ -23,8 +23,7 @@ public:
   Runtime(Runtime &&) = delete;
   Runtime &operator=(Runtime &&) = delete;
 
-  std::string getTrapCode() const;
-  std::string getTrapMessage() const;
+  Trapcode getTrapCode() const;
 
   struct CallReturn {
     bool hasTrapped{false};

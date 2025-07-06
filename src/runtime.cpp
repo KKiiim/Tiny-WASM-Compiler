@@ -54,25 +54,6 @@ void Runtime::unregisterSignalHandler() const {
   }
 }
 
-std::string Runtime::getTrapCode() const {
-  Trapcode const trapcode = static_cast<Trapcode>(globalTrapcode);
-  if (trapcode == Trapcode::NONE) {
-    throw std::runtime_error("trap code NONE is invalid");
-  }
-  auto const &v = trapcodeString.find(trapcode);
-  if (v == trapcodeString.end()) {
-    throw std::runtime_error("unregistered trap code " + std::to_string(static_cast<uint32_t>(trapcode)));
-  }
-  return v->second;
-}
-std::string Runtime::getTrapMessage() const {
-  static const std::vector<std::string> trapMessages = {
-      "No error",                    // Trapcode 0, invalid trap code
-      "Division by zero",            // Trapcode 1
-      "Integer overflow",            // Trapcode 2
-      "undefined element",           // Trapcode 3
-      "indirect call type mismatch", // Trapcode 4
-      "call stack exhausted",        // Trapcode 5
-  };
-  return trapMessages[globalTrapcode];
+Trapcode Runtime::getTrapCode() const {
+  return static_cast<Trapcode>(globalTrapcode);
 }
