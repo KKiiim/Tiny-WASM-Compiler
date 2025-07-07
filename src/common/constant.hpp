@@ -9,6 +9,7 @@ constexpr const uint32_t DefaultPageSize = 64 * 1024; // 64 KB
 constexpr const uint32_t MaxParamsForWasmFunction = 7U;
 constexpr const uint32_t stackGuardSize = 64 * 1024;   // 64KB stack guard size
 constexpr const uint32_t MaxLinearMemoryPages = 1024U; // 1024 pages
+///< Max 64MB linear memory size
 static_assert((static_cast<uint64_t>(DefaultPageSize) * MaxLinearMemoryPages) <= static_cast<uint64_t>(UINT32_MAX), "should within 32bits");
 
 enum Trapcode : uint32_t {

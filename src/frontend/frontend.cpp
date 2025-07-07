@@ -109,7 +109,7 @@ void Frontend::validateVersion() {
 
 void Frontend::genWrapperFunction() {
   nativeToJitWrapper = as_.getCurrentAbsAddress();
-  LOG_YELLOW << "genWrapperFunction" << LOG_END;
+
   ///< Init X28(ROP) for operandStack
   as_.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
   ///< Init X27(GLOBAL) for global memory
@@ -120,7 +120,6 @@ void Frontend::genWrapperFunction() {
     ///< Init/Restore X25(SizeLinMem) for linear memory pages size
     as_.emit_mov_x_imm64(REG::R9, linearMemoryByteSize.getStartAddr());
     as_.ldr_base_byteOff(SizeLinMem, REG::R9, 0, false);
-    LOG_YELLOW << "Init/Restore X25(SizeLinMem)" << LOG_END;
   }
 
   ///< Init X24 for stack guard
@@ -132,7 +131,7 @@ void Frontend::genWrapperFunction() {
   emitWasmCall(functionIndexReg);
   as_.inc_sp(16U);
 
-  // Update SizeLinMem to memory
+  // Update SizeLinMem to memory after current nativeToWasm call
   as_.emit_mov_x_imm64(REG::R9, linearMemoryByteSize.getStartAddr());
   as_.str_base_byteOff(REG::R9, SizeLinMem, 0, false);
 
@@ -154,7 +153,6 @@ void Frontend::parseMemorySection() {
     uint64_t const memoryByteSize = static_cast<uint64_t>(DefaultPageSize) * module_.memoryInfos[0].initialSize;
     confirm(memoryByteSize <= UINT32_MAX, "memoryByteSize assumed to within 32 bits");
     linearMemoryByteSize.set(0, static_cast<uint32_t>(memoryByteSize & 0xFFFFFFFFU));
-    LOG_YELLOW << "parseMemorySection" << LOG_END;
   }
 }
 void Frontend::parseDataSection() {

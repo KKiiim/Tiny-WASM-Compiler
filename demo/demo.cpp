@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     // [ref: doc-design]
     std::array<uint64_t, MaxParamsForWasmFunction> params{0, 0, 0, 0, 0, 0, 0};
     Runtime::CallReturn const ret =
-        runtime.callByName<uint32_t>("grow", "i(i)", params[0], params[1], params[2], params[3], params[4], params[5], params[6]);
+        runtime.callByName<uint32_t>("div_s", "i(ii)", params[0], params[1], params[2], params[3], params[4], params[5], params[6]);
     if (ret.hasTrapped) {
       Trapcode const trapCode = runtime.getTrapCode();
       LOG_YELLOW << "TrapException caught with code: " << trapCode << LOG_END;
