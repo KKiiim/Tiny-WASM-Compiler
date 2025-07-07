@@ -28,8 +28,10 @@ static constexpr const REG ROP = REG::R28;
 static constexpr const REG GLOBAL = REG::R27;
 // R26 points to base of linear memory
 static constexpr const REG LinMem = REG::R26;
-// R25 stores the stack guard address
-static constexpr const REG StackGuard = REG::R25;
+// R25 stores the bytes size of linear memory
+static constexpr const REG SizeLinMem = REG::R25;
+// R24 stores the stack guard address
+static constexpr const REG StackGuard = REG::R24;
 ///////////////////////////////////////////////////////////////////
 
 namespace RegUtil {

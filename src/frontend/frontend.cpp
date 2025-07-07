@@ -24,8 +24,6 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
   validateVersion();
   LOG_DEBUG << "validate success" << LOG_END;
 
-  genWrapperFunction();
-
   while (br_.hasNextByte()) {
     SectionType const sectionType{br_.readByte<SectionType>()};
     uint32_t const sectionSize{br_.readLEB128<uint32_t>()}; // FIXME(): ignore invalid size check
@@ -63,6 +61,7 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
       parseElementSection();
       break;
     case SectionType::CODE:
+      genWrapperFunction();
       parseCodeSection();
       break;
     case SectionType::DATA:
@@ -115,9 +114,15 @@ void Frontend::genWrapperFunction() {
   as_.emit_mov_x_imm64(ROP, operandStack_.getStartAddr());
   ///< Init X27(GLOBAL) for global memory
   as_.emit_mov_x_imm64(GLOBAL, globalMemory.getStartAddr());
-  ///< Init X26(LinMem) for linear memory
-  as_.emit_mov_x_imm64(LinMem, linearMemory.getStartAddr());
-  ///< Init X25 for stack guard
+  if (module_.memoryNumber > 0U) {
+    ///< Init X26(LinMem) for linear memory
+    as_.emit_mov_x_imm64(LinMem, linearMemory.getStartAddr());
+    ///< Init/Restore X25(SizeLinMem) for linear memory pages size
+    as_.emit_mov_x_imm64(REG::R9, linearMemoryByteSize.getStartAddr());
+    as_.ldr_base_byteOff(SizeLinMem, REG::R9, 0, false);
+  }
+
+  ///< Init X24 for stack guard
   as_.emit_mov_x_imm64(StackGuard, stackGuardSize);
   as_.sub_r_r_immReg(StackGuard, REG::SP, StackGuard, true);
 
@@ -125,6 +130,11 @@ void Frontend::genWrapperFunction() {
   Storage const functionIndexReg{REG::R7};
   emitWasmCall(functionIndexReg);
   as_.inc_sp(16U);
+
+  // Update SizeLinMem to memory after current nativeToWasm call
+  as_.emit_mov_x_imm64(REG::R9, linearMemoryByteSize.getStartAddr());
+  as_.str_base_byteOff(REG::R9, SizeLinMem, 0, false);
+
   as_.ret();
 }
 
@@ -137,8 +147,12 @@ void Frontend::parseMemorySection() {
     memoryInfo.initialSize = br_.readLEB128<uint32_t>();
     if (memoryInfo.hasLimit) {
       memoryInfo.maximumSize = br_.readLEB128<uint32_t>();
+      confirm(memoryInfo.maximumSize <= MaxLinearMemoryPages, "must");
     }
     module_.memoryInfos.push_back(memoryInfo);
+    uint64_t const memoryByteSize = static_cast<uint64_t>(DefaultPageSize) * module_.memoryInfos[0].initialSize;
+    confirm(memoryByteSize <= UINT32_MAX, "memoryByteSize assumed to within 32 bits");
+    linearMemoryByteSize.set(0, static_cast<uint32_t>(memoryByteSize & 0xFFFFFFFFU));
   }
 }
 void Frontend::parseDataSection() {
@@ -838,12 +852,16 @@ void Frontend::parseCodeSection() {
         break;
       }
       case OPCode::I32_CTZ:
-      case OPCode::I64_CTZ: {
-        bool const is64bit = (opcode == OPCode::I64_CTZ);
+      case OPCode::I32_CLZ:
+      case OPCode::I64_CTZ:
+      case OPCode::I64_CLZ: {
+        bool const is64bit = (opcode == OPCode::I64_CTZ || opcode == OPCode::I64_CLZ);
         confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must be value type");
         op.subROP(is64bit);
         as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
-        as_.rBits_r_r(REG::R9, REG::R9, is64bit);
+        if (opcode == OPCode::I32_CTZ || opcode == OPCode::I64_CTZ) {
+          as_.rBits_r_r(REG::R9, REG::R9, is64bit);
+        }
         as_.clz_r_r(REG::R9, REG::R9, is64bit);
         as_.str_base_byteOff(ROP, REG::R9, 0U, is64bit);
         op.addROP(is64bit);
@@ -851,8 +869,11 @@ void Frontend::parseCodeSection() {
         break;
       }
       case OPCode::I64_LE_U:
-      case OPCode::I32_LE_U: {
-        bool const is64bit = (opcode == OPCode::I64_LE_U);
+      case OPCode::I32_LE_U:
+      case OPCode::I64_LE_S:
+      case OPCode::I32_LE_S: {
+        bool const is64bit = (opcode == OPCode::I64_LE_U || opcode == OPCode::I64_LE_S);
+        bool const isSigned = (opcode == OPCode::I64_LE_S || opcode == OPCode::I32_LE_S);
         StackElement const right = stack_.pop();
         StackElement const left = stack_.pop();
         confirm(right.isI64() == is64bit, "must be value type");
@@ -867,10 +888,17 @@ void Frontend::parseCodeSection() {
         as_.emit_mov_w_imm32(resultReg, 1U);
 
         as_.cmp_r_r(REG::R10, REG::R9, is64bit);
-        Relpatch const unsignedLessOrSame = as_.prepareJmp(CC::LS);
-        // not LS(unsigned)
-        as_.emit_mov_w_imm32(resultReg, 0);
-        unsignedLessOrSame.linkToHere();
+        if (isSigned) {
+          Relpatch const signedLessOrEqual = as_.prepareJmp(CC::LE);
+          // not LE(signed)
+          as_.emit_mov_w_imm32(resultReg, 0);
+          signedLessOrEqual.linkToHere();
+        } else {
+          Relpatch const unsignedLessOrSame = as_.prepareJmp(CC::LS);
+          // not LS(unsigned)
+          as_.emit_mov_w_imm32(resultReg, 0);
+          unsignedLessOrSame.linkToHere();
+        }
         as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
 
@@ -895,6 +923,34 @@ void Frontend::parseCodeSection() {
         // value is zero. Set true
         as_.emit_mov_w_imm32(resultReg, 1U);
         notZero.linkToHere();
+        as_.str_base_byteOff(ROP, resultReg, 0U, false);
+        op.addROP(false);
+
+        stack_.push(StackElement{ElementType::I32});
+        break;
+      }
+      case OPCode::I64_NE:
+      case OPCode::I32_NE: {
+        bool const is64bit = (opcode == OPCode::I64_NE);
+        confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must match value type");
+        stack_.pop();
+        confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must match value type");
+        stack_.pop();
+
+        op.subROP(is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
+        op.subROP(is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
+
+        REG const resultReg = REG::R11;
+        // prepare default not equal(true)
+        as_.emit_mov_w_imm32(resultReg, 1U);
+
+        as_.cmp_r_r(REG::R10, REG::R9, is64bit);
+        Relpatch const notEqual = as_.prepareJmp(CC::NE);
+        as_.emit_mov_w_imm32(resultReg, 0U);
+        notEqual.linkToHere();
+
         as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
 
@@ -1090,20 +1146,185 @@ void Frontend::parseCodeSection() {
         constexpr auto loadSizeArray = make_array(4U, 8U, 4U, 8U, 1U, 1U, 2U, 2U, 1U, 1U, 2U, 2U, 4U, 4U);
         uint32_t const loadSize = loadSizeArray[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_LOAD)];
 
-        confirm(opcode == OPCode::I32_LOAD8_U, "only I32_LOAD8_U supported for now");
+        confirm((opcode == OPCode::I32_LOAD8_U || opcode == OPCode::I32_LOAD || opcode == OPCode::I32_LOAD8_S), "only part supported for now");
 
         confirm(!stack_.pop().isI64(), "offset must be i32 value type");
         op.subROP(false);
-        as_.ldr_base_byteOff(REG::R9, ROP, 0U, false);
+        REG const offsetReg = REG::R9;
+        as_.ldr_base_byteOff(offsetReg, ROP, 0U, false);
+
+        // TRAP if range is out of linear memory bounds
+        as_.add_r_r_imm(REG::R11, offsetReg, loadSize, true);
+        as_.cmp_r_r(REG::R11, SizeLinMem, true);
+        Relpatch const notOOM = as_.prepareJmp(CC::LS);
+        as_.setTrap(Trapcode::Out_of_bounds_memory_access);
+        notOOM.linkToHere();
+
         REG const getDataReg = REG::R10;
-        as_.emit_mov_x_imm64(LinMem, linearMemory.getStartAddr());
         if (loadSize == 1U) {
-          // data is ZeroExtend
-          as_.ldrb_uReg(getDataReg, LinMem, REG::R9);
+          as_.ldrb_uReg(getDataReg, LinMem, offsetReg);
+        } else if (loadSize == 2U) {
+          confirm(false, "load size 2 not supported");
+        } else if (loadSize == 4U) {
+          as_.add_r_r_shiftR(offsetReg, LinMem, offsetReg, true);
+          // offsetReg is now the address
+          as_.ldr_base_byteOff(getDataReg, offsetReg, 0, false);
+        } else if (loadSize == 8U) {
+          confirm(false, "load size 8 not supported");
+        } else {
+          confirm(false, "load size not supported");
         }
         as_.str_base_byteOff(ROP, getDataReg, 0U, is64bit);
         op.addROP(is64bit);
         stack_.push(StackElement{is64bit ? ElementType::I64 : ElementType::I32});
+        break;
+      }
+      case OPCode::I32_STORE:
+      case OPCode::I64_STORE:
+      case OPCode::F32_STORE:
+      case OPCode::F64_STORE:
+      case OPCode::I32_STORE8:
+      case OPCode::I32_STORE16:
+      case OPCode::I64_STORE8:
+      case OPCode::I64_STORE16:
+      case OPCode::I64_STORE32: {
+        confirm((opcode != OPCode::F32_STORE && opcode != OPCode::F64_STORE), "float number not supported");
+        bool const is64bit =
+            (opcode == OPCode::I64_STORE || opcode == OPCode::F64_STORE || (opcode >= OPCode::I64_STORE8 && opcode <= OPCode::I64_STORE32));
+        constexpr auto storeSizeArray = make_array(4U, 8U, 4U, 8U, 1U, 2U, 1U, 2U, 4U);
+
+        confirm((opcode == OPCode::I32_STORE || opcode == OPCode::I32_STORE8 || opcode == OPCode::I32_STORE16), "only part supported for now");
+
+        uint32_t const alignment{br_.readLEB128<uint32_t>()};
+        uint32_t const storeOffset{br_.readLEB128<uint32_t>()};
+        LOG_YELLOW << "alignment: " << alignment << ", storeOffset: " << storeOffset << std::endl;
+        // confirm((alignment == 2U && storeOffset == 0U), "offset not supported for now");
+
+        // validation
+        confirm(stack_.pop().isI64() == is64bit, "store data type should match");
+        confirm(!stack_.pop().isI64(), "offset must be i32 value type");
+        // get data and offset
+        REG const dataReg = REG::R9;
+        REG const offsetReg = REG::R10;
+        op.subROP(is64bit);
+        as_.ldr_base_byteOff(dataReg, ROP, 0U, false);
+        op.subROP(false);
+        as_.ldr_base_byteOff(offsetReg, ROP, 0U, false);
+
+        // TRAP if range is out of linear memory bounds
+        as_.add_r_r_imm(REG::R11, offsetReg, storeSizeArray[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_STORE)], true);
+        as_.cmp_r_r(REG::R11, SizeLinMem, true);
+        Relpatch const notOOM = as_.prepareJmp(CC::LS);
+        as_.setTrap(Trapcode::Out_of_bounds_memory_access);
+        notOOM.linkToHere();
+
+        // uint32_t const storeSize = storeSizeArray[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_STORE)];
+        // if (storeSize == 1U) {
+        //   as_.ldrb_uReg(getDataReg, LinMem, offsetReg);
+        // } else if (storeSize == 2U) {
+        //   confirm(false, "store size 2 not supported");
+        // } else if (storeSize == 4U) {
+        //   as_.add_r_r_shiftR(offsetReg, LinMem, offsetReg, true);
+        //   // offsetReg is now the address
+        //   as_.ldr_base_byteOff(getDataReg, offsetReg, 0, false);
+        // } else if (storeSize == 8U) {
+        //   confirm(false, "store size 8 not supported");
+        // } else {
+        //   confirm(false, "store size not supported");
+        // }
+
+        as_.add_r_r_shiftR(offsetReg, LinMem, offsetReg, true);
+        REG const storeAddr = offsetReg;
+        // store data
+        as_.str_base_byteOff(storeAddr, dataReg, 0U, is64bit);
+        break;
+      }
+      case OPCode::MEMORY_SIZE: {
+        uint32_t const memoryIndex{br_.readLEB128<uint32_t>()};
+        confirm(memoryIndex == 0U, "only memory index 0 supported for now");
+        // memory size is in pages, 1 page = 64K
+        REG const memorySizeReg = REG::R9;
+        REG const memoryPageSizeReg = REG::R10;
+        as_.emit_mov_x_imm64(memoryPageSizeReg, DefaultPageSize);
+        as_.udiv_r_r(memorySizeReg, SizeLinMem, memoryPageSizeReg, true);
+        as_.str_base_byteOff(ROP, memorySizeReg, 0, false);
+        op.addROP(false); // memory size is i32
+        stack_.push(StackElement{ElementType::I32});
+        break;
+      }
+      case OPCode::MEMORY_GROW: {
+        auto const &memoryInfo = module_.memoryInfos[0];
+        uint32_t const memoryIndex{br_.readLEB128<uint32_t>()};
+        confirm(memoryIndex == 0U, "only memory index 0 supported for now");
+        confirm(!stack_.pop().isI64(), "grow size should be i32 value");
+        op.subROP(false);
+        REG const growSizeReg = REG::R9;
+        as_.ldr_base_byteOff(growSizeReg, ROP, 0U, false);
+        // now growSizeReg is number of pages
+        REG const currentPageSize = REG::R10;
+        REG const memorySizePerPage = REG::R11;
+        as_.emit_mov_x_imm64(memorySizePerPage, DefaultPageSize);
+        as_.udiv_r_r(currentPageSize, SizeLinMem, memorySizePerPage, true);
+        REG const toPageSize = REG::R12;
+        as_.add_r_r_shiftR(toPageSize, currentPageSize, growSizeReg, false);
+
+        ///< Get min(embedderLimit, moduleLimit)
+        REG const limitSize = REG::R13;
+        as_.emit_mov_w_imm32(limitSize, MaxLinearMemoryPages); // init with embedderLimit
+        if (memoryInfo.hasLimit) {
+          as_.cmp_r_imm(limitSize, memoryInfo.maximumSize, false);
+          Relpatch const noNeedToUpdateMin = as_.prepareJmp(CC::LO);
+          as_.emit_mov_w_imm32(limitSize, memoryInfo.maximumSize);
+          noNeedToUpdateMin.linkToHere();
+        }
+
+        // If size larger than limit, or larger than resources available of the embedder
+        //    return err(-1)
+        // else: return old size
+        REG const growRet = REG::R14;
+        // init with err
+        as_.emit_mov_w_imm32(growRet, static_cast<uint32_t>(-1));
+        as_.cmp_r_r(toPageSize, limitSize, false);
+        Relpatch const exceedLimit = as_.prepareJmp(CC::HI);
+        ///< Not exceed, should return old size
+        as_.mov_r_r(growRet, currentPageSize, false);
+        ///< Update SizeLinMem
+        as_.mul_r_r(growSizeReg, growSizeReg, memorySizePerPage, true);
+        // now growSizeReg is bytes size
+        as_.add_r_r_shiftR(SizeLinMem, SizeLinMem, growSizeReg, true);
+        exceedLimit.linkToHere();
+
+        as_.str_base_byteOff(ROP, growRet, 0, false);
+        op.addROP(false);
+        stack_.push(StackElement{ElementType::I32});
+        break;
+      }
+      case OPCode::I32_GE_U:
+      case OPCode::I64_GE_U: {
+        bool const is64bit = (opcode == OPCode::I64_GE_U);
+        confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must match value type");
+        stack_.pop();
+        confirm((stack_.top().isValue() && (stack_.top().isI64() == is64bit)), "must match value type");
+        stack_.pop();
+
+        op.subROP(is64bit);
+        as_.ldr_base_byteOff(REG::R9, ROP, 0U, is64bit);
+        op.subROP(is64bit);
+        as_.ldr_base_byteOff(REG::R10, ROP, 0U, is64bit);
+
+        REG const resultReg = REG::R11;
+        // prepare default greater(true)
+        as_.emit_mov_w_imm32(resultReg, 1U);
+
+        as_.cmp_r_r(REG::R10, REG::R9, is64bit);
+        Relpatch const higher = as_.prepareJmp(CC::HI);
+        as_.emit_mov_w_imm32(resultReg, 0U);
+        higher.linkToHere();
+
+        as_.str_base_byteOff(ROP, resultReg, 0U, false);
+        op.addROP(false);
+
+        stack_.push(StackElement{ElementType::I32});
         break;
       }
       case OPCode::UNREACHABLE:
@@ -1115,34 +1336,16 @@ void Frontend::parseCodeSection() {
       case OPCode::SELECT_T:
       case OPCode::TABLE_GET:
       case OPCode::TABLE_SET:
-      case OPCode::I32_STORE:
-      case OPCode::I64_STORE:
-      case OPCode::F32_STORE:
-      case OPCode::F64_STORE:
-      case OPCode::I32_STORE8:
-      case OPCode::I32_STORE16:
-      case OPCode::I64_STORE8:
-      case OPCode::I64_STORE16:
-      case OPCode::I64_STORE32:
-      case OPCode::MEMORY_SIZE:
-      case OPCode::MEMORY_GROW:
       case OPCode::F32_CONST:
       case OPCode::F64_CONST:
-      case OPCode::I32_NE:
       case OPCode::I32_LT_S:
       case OPCode::I32_LT_U:
       case OPCode::I32_GT_S:
-      case OPCode::I32_LE_S:
       case OPCode::I32_GE_S:
-      case OPCode::I32_GE_U:
-      case OPCode::I64_NE:
       case OPCode::I64_LT_S:
       case OPCode::I64_LT_U:
       case OPCode::I64_GT_S:
-      case OPCode::I64_LE_S:
       case OPCode::I64_GE_S:
-      case OPCode::I64_GE_U:
-      case OPCode::I32_CLZ:
       case OPCode::I32_POPCNT:
       case OPCode::I32_REM_S:
       case OPCode::I32_REM_U:
@@ -1154,7 +1357,6 @@ void Frontend::parseCodeSection() {
       case OPCode::I32_SHR_U:
       case OPCode::I32_ROTL:
       case OPCode::I32_ROTR:
-      case OPCode::I64_CLZ:
       case OPCode::I64_POPCNT:
       case OPCode::I64_REM_S:
       case OPCode::I64_REM_U:
