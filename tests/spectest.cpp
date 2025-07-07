@@ -85,6 +85,20 @@ TEST(Chapter11, data) {
     execTestModule(module);
   }
 }
+TEST(Chapter11, store) {
+  JsonReader const jsonReader("tests/testcases/tmp/store.json");
+  LOG_YELLOW << ConsoleYellow << "Testing store.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
+TEST(Chapter11, grow) {
+  JsonReader const jsonReader("tests/testcases/tmp/grow.json");
+  LOG_YELLOW << ConsoleYellow << "Testing grow.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
 TEST(Chapter13, stack_overflow) {
   JsonReader const jsonReader("tests/testcases/tmp/stack_overflow.json");
   LOG_YELLOW << ConsoleYellow << "Testing stack_overflow.json" << LOG_END;

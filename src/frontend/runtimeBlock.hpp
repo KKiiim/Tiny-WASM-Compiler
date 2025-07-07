@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 
 #include "src/common/constant.hpp"
 #include "src/common/logger.hpp"
@@ -14,6 +15,11 @@ template <typename Data> class RuntimeBlock {
 public:
   RuntimeBlock() : m_(static_cast<uint8_t *>(malloc(defaultBlockSize))) {
     confirm(m_ != nullptr, "malloc RuntimeBlock failed");
+    memset(m_, 0, defaultBlockSize);
+  }
+  explicit RuntimeBlock(uint32_t const pages) : m_(static_cast<uint8_t *>(malloc(pages * defaultBlockSize))) {
+    confirm(m_ != nullptr, "malloc RuntimeBlock failed");
+    memset(m_, 0, pages * defaultBlockSize);
   }
   ~RuntimeBlock() {
     free(m_);
