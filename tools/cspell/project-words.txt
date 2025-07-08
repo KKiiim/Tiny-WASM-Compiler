@@ -30,3 +30,4 @@ immr
 ldrb
 LDRB
 embedder
+STRH

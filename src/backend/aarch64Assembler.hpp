@@ -47,6 +47,10 @@ public:
   void ldrb_uReg(REG const destReg, REG const addrReg, REG const offsetReg);
   /// @brief STR <Wt>, [<Xn|SP>{, #<pimm>}]. Unsigned offset
   void str_base_byteOff(REG const addrReg, REG const srcReg, uint32_t const byteOffset, bool const is64bit);
+  /// STR Wt, [Xn|SP, (Wm|Xm)]: Stores a 32-bit word register to memory.
+  void str_w_r(REG const addrReg, REG const srcReg);
+  /// STRH Wt, [Xn|SP, (Wm|Xm)]: Stores the least significant halfword of a 32-bit register to memory.
+  void str_h_w_r(REG const addrReg, REG const srcReg);
   /// @brief ADD R[d], R[s], imm
   void add_r_r_imm(REG const destReg, REG const srcReg, uint32_t const uimm, bool const is64bit);
   /// @brief ADD R[d], R[n], R[m]
