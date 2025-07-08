@@ -42,6 +42,18 @@ void Assembler::str_base_byteOff(REG const addrReg, REG const srcReg, uint32_t c
   opcode |= (off & 0xFFFU) << 10U;
   append(opcode);
 }
+void Assembler::str_w_r(REG const addrReg, REG const srcReg) {
+  OPCodeTemplate opcode = 0xB8206800;
+  opcode |= static_cast<OPCodeTemplate>(srcReg);
+  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
+  append(opcode);
+}
+void Assembler::str_h_w_r(REG const addrReg, REG const srcReg) {
+  OPCodeTemplate opcode = 0x78206800;
+  opcode |= static_cast<OPCodeTemplate>(srcReg);
+  opcode |= (static_cast<OPCodeTemplate>(addrReg) << 5U);
+  append(opcode);
+}
 void Assembler::ldr_base_byteOff(REG const destReg, REG const addrReg, uint32_t const byteOffset, bool const is64bit) {
   // Applies when (size == 10)
   // LDR <Wt>, [<Xn|SP>{, #<pimm>}]

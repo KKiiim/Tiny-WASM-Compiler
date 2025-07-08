@@ -92,6 +92,13 @@ TEST(Chapter11, store) {
     execTestModule(module);
   }
 }
+TEST(Chapter11, load) {
+  JsonReader const jsonReader("tests/testcases/tmp/load.json");
+  LOG_YELLOW << ConsoleYellow << "Testing load.json" << LOG_END;
+  for (const auto &module : jsonReader.modules_) {
+    execTestModule(module);
+  }
+}
 TEST(Chapter11, grow) {
   JsonReader const jsonReader("tests/testcases/tmp/grow.json");
   LOG_YELLOW << ConsoleYellow << "Testing grow.json" << LOG_END;

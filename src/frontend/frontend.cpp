@@ -1136,17 +1136,21 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_LOAD16_U:
       case OPCode::I64_LOAD32_S:
       case OPCode::I64_LOAD32_U: {
+        ///< Feature not fully supported
         confirm((opcode != OPCode::F32_LOAD && opcode != OPCode::F64_LOAD), "float number not supported");
-        bool const needAlignment = br_.readByte<uint8_t>() == 1U;
+        confirm((opcode == OPCode::I32_LOAD8_U || opcode == OPCode::I32_LOAD || opcode == OPCode::I32_LOAD8_S), "only part supported for now");
+
+        constexpr auto maxAlignmentPow2 = make_array(2_U8, 3_U8, 2_U8, 3_U8, 0_U8, 0_U8, 1_U8, 1_U8, 0_U8, 0_U8, 1_U8, 1_U8, 2_U8, 2_U8);
+        uint32_t const alignment{br_.readLEB128<uint32_t>()};
+        confirm(alignment <= maxAlignmentPow2[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_LOAD)], "Alignment_out_of_range");
+
         uint32_t const loadOffset{br_.readLEB128<uint32_t>()};
-        confirm((!needAlignment && loadOffset == 0U), "offset not supported for now");
+        confirm(loadOffset == 0U, "offset not supported for now");
 
         bool const is64bit =
             (opcode == OPCode::I64_LOAD || opcode == OPCode::F64_LOAD || (opcode >= OPCode::I64_LOAD8_S && opcode <= OPCode::I64_LOAD32_U));
         constexpr auto loadSizeArray = make_array(4U, 8U, 4U, 8U, 1U, 1U, 2U, 2U, 1U, 1U, 2U, 2U, 4U, 4U);
         uint32_t const loadSize = loadSizeArray[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_LOAD)];
-
-        confirm((opcode == OPCode::I32_LOAD8_U || opcode == OPCode::I32_LOAD || opcode == OPCode::I32_LOAD8_S), "only part supported for now");
 
         confirm(!stack_.pop().isI64(), "offset must be i32 value type");
         op.subROP(false);
@@ -1188,18 +1192,21 @@ void Frontend::parseCodeSection() {
       case OPCode::I64_STORE8:
       case OPCode::I64_STORE16:
       case OPCode::I64_STORE32: {
-        confirm((opcode != OPCode::F32_STORE && opcode != OPCode::F64_STORE), "float number not supported");
         bool const is64bit =
             (opcode == OPCode::I64_STORE || opcode == OPCode::F64_STORE || (opcode >= OPCode::I64_STORE8 && opcode <= OPCode::I64_STORE32));
-        constexpr auto storeSizeArray = make_array(4U, 8U, 4U, 8U, 1U, 2U, 1U, 2U, 4U);
 
+        ///< Feature not fully supported
+        confirm((opcode != OPCode::F32_STORE && opcode != OPCode::F64_STORE), "float number not supported");
+        confirm(!is64bit, "only i32 store supported for now");
         confirm((opcode == OPCode::I32_STORE || opcode == OPCode::I32_STORE8 || opcode == OPCode::I32_STORE16), "only part supported for now");
 
+        constexpr auto storeSizeArray = make_array(4U, 8U, 4U, 8U, 1U, 2U, 1U, 2U, 4U);
+        constexpr auto maxAlignmentPow2 = make_array(2_U8, 3_U8, 2_U8, 3_U8, 0_U8, 1_U8, 0_U8, 1_U8, 2_U8);
         uint32_t const alignment{br_.readLEB128<uint32_t>()};
-        uint32_t const storeOffset{br_.readLEB128<uint32_t>()};
-        LOG_YELLOW << "alignment: " << alignment << ", storeOffset: " << storeOffset << std::endl;
-        // confirm((alignment == 2U && storeOffset == 0U), "offset not supported for now");
+        confirm(alignment <= maxAlignmentPow2[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_STORE)], "Alignment_out_of_range");
 
+        uint32_t const storeOffset{br_.readLEB128<uint32_t>()};
+        confirm(storeOffset == 0U, "offset not supported for now");
         // validation
         confirm(stack_.pop().isI64() == is64bit, "store data type should match");
         confirm(!stack_.pop().isI64(), "offset must be i32 value type");
@@ -1207,7 +1214,7 @@ void Frontend::parseCodeSection() {
         REG const dataReg = REG::R9;
         REG const offsetReg = REG::R10;
         op.subROP(is64bit);
-        as_.ldr_base_byteOff(dataReg, ROP, 0U, false);
+        as_.ldr_base_byteOff(dataReg, ROP, 0U, is64bit);
         op.subROP(false);
         as_.ldr_base_byteOff(offsetReg, ROP, 0U, false);
 
@@ -1218,25 +1225,21 @@ void Frontend::parseCodeSection() {
         as_.setTrap(Trapcode::Out_of_bounds_memory_access);
         notOOM.linkToHere();
 
-        // uint32_t const storeSize = storeSizeArray[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_STORE)];
-        // if (storeSize == 1U) {
-        //   as_.ldrb_uReg(getDataReg, LinMem, offsetReg);
-        // } else if (storeSize == 2U) {
-        //   confirm(false, "store size 2 not supported");
-        // } else if (storeSize == 4U) {
-        //   as_.add_r_r_shiftR(offsetReg, LinMem, offsetReg, true);
-        //   // offsetReg is now the address
-        //   as_.ldr_base_byteOff(getDataReg, offsetReg, 0, false);
-        // } else if (storeSize == 8U) {
-        //   confirm(false, "store size 8 not supported");
-        // } else {
-        //   confirm(false, "store size not supported");
-        // }
-
         as_.add_r_r_shiftR(offsetReg, LinMem, offsetReg, true);
         REG const storeAddr = offsetReg;
         // store data
-        as_.str_base_byteOff(storeAddr, dataReg, 0U, is64bit);
+        uint32_t const storeSize = storeSizeArray[static_cast<uint32_t>(opcode) - static_cast<uint32_t>(OPCode::I32_STORE)];
+        if (storeSize == 1U) {
+          as_.str_base_byteOff(storeAddr, dataReg, 0U, is64bit);
+        } else if (storeSize == 2U) {
+          as_.str_h_w_r(storeAddr, dataReg);
+        } else if (storeSize == 4U) {
+          as_.str_w_r(storeAddr, dataReg);
+        } else if (storeSize == 8U) {
+          confirm(false, "store size 8 not supported");
+        } else {
+          confirm(false, "store size not supported");
+        }
         break;
       }
       case OPCode::MEMORY_SIZE: {
