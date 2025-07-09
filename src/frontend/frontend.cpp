@@ -358,7 +358,7 @@ void Frontend::parseImportSection() {
     module_.funcIndex2TypeIndex_.push_back(signatureIndex);
     module_.functionInfos_.push_back({/*placeholder*/});
 
-    confirm(moduleName == "env" && fieldName == "myPrintf", "Partially supported yet");
+    confirm(moduleName == "env" && fieldName == "myPrintf", "Only 'env.myPrintf' imports are supported at this time");
     linearMemoryHelper = &linearMemory;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     uintptr_t const staticLinkPrintfAddr = reinterpret_cast<uintptr_t>(myPrintf);
@@ -372,8 +372,8 @@ void Frontend::parseCodeSection() {
   uint32_t const internalFuncNumbers{br_.readLEB128<uint32_t>()};
 
   // parse each function body
-  for (uint32_t internalFuncCouter = 0U; internalFuncCouter < internalFuncNumbers; ++internalFuncCouter) {
-    uint32_t const currentFuncIndex = internalFuncCouter + module_.importsFunctionNumbers;
+  for (uint32_t internalFuncCounter = 0U; internalFuncCounter < internalFuncNumbers; ++internalFuncCounter) {
+    uint32_t const currentFuncIndex = internalFuncCounter + module_.importsFunctionNumbers;
     ////// Temporary variables of CURRENT function
     ///< record local's memory addr offset from SP in this function
     ///< to handle operand variables
