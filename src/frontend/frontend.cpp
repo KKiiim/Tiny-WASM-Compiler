@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
 #include "frontend.hpp"
@@ -37,7 +38,7 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
       parseTypeSection();
       break;
     case SectionType::IMPORT:
-      throw std::runtime_error("SectionType::IMPORT unsupported");
+      parseImportSection();
       break;
     case SectionType::FUNCTION:
       parseFunctionSection();
@@ -159,16 +160,20 @@ void Frontend::parseDataSection() {
   module_.numberDataSegments = br_.readLEB128<uint32_t>();
   for (uint32_t i = 0U; i < module_.numberDataSegments; ++i) {
     // data segment header
-    confirm(0U == br_.readLEB128<uint32_t>(), "segment flags assumed to be zero");
+    enum class DataMode : uint32_t { Active, Passive, ActiveInNonDefaultMemory };
+    DataMode const mode{static_cast<DataMode>(br_.readLEB128<uint32_t>())};
+    confirm(mode == DataMode::Active, "Passive_mode_data_segments_not_implemented");
+
     OPCode const type = br_.readByte<OPCode>();
-    uint32_t const value = br_.readLEB128<uint32_t>();
-    confirm((type == OPCode::I32_CONST && value == 0U), "others not supported yet");
+    confirm(type == OPCode::I32_CONST, "others not supported yet");
+    uint32_t const dataInitOffset = br_.readLEB128<uint32_t>();
+
     confirm(br_.readByte<OPCode>() == OPCode::END, "must");
 
     uint32_t const currentDataSegmentSize = br_.readLEB128<uint32_t>();
     // data segment data
     for (uint32_t j = 0U; j < currentDataSegmentSize; ++j) {
-      linearMemory.set(j, br_.readByte<uint8_t>());
+      linearMemory.set(j + dataInitOffset, br_.readByte<uint8_t>());
     }
   }
 }
@@ -221,26 +226,22 @@ void Frontend::parseTypeSection() {
 
     std::string params{"("};
     uint32_t const paramsNum = br_.readLEB128<uint32_t>();
-    uint32_t paramIndex = 0U;
-    while (paramIndex++ < paramsNum) {
+    confirm(paramsNum <= MaxParamsForWasmFunction, "more params not supported yet");
+    for (uint32_t paramIndex = 0U; paramIndex < paramsNum; paramIndex++) {
       WasmType const pType = br_.readByte<WasmType>();
       paramInfos.push_back(pType);
       params.push_back(static_cast<char>(ModuleInfo::wasmType2SignatureType(pType)));
     }
-    confirm(paramsNum == paramInfos.size(), "must");
     params.push_back(')'); // end of params
 
     std::string signature{};
 
     uint32_t const resultNum = br_.readLEB128<uint32_t>();
-    uint32_t resultIndex = 0U;
-    while (resultIndex++ < resultNum) {
+    for (uint32_t resultIndex = 0U; resultIndex < resultNum; resultIndex++) {
       WasmType const rType = br_.readByte<WasmType>();
       resultInfos.push_back(rType);
       signature.push_back(static_cast<char>(ModuleInfo::wasmType2SignatureType(rType)));
     }
-    confirm(signature.size() <= 1U, "only one result supported");
-    confirm(resultNum == resultInfos.size(), "must");
     confirm(resultInfos.size() <= 1U, "only one result supported");
 
     signature += params;
@@ -258,7 +259,7 @@ void Frontend::parseFunctionSection() {
     counter++;
 
     uint32_t const index = br_.readLEB128<uint32_t>();
-    module_.funcIndex2TypeIndex_.push_back({index});
+    module_.funcIndex2TypeIndex_.push_back(index);
   }
 }
 void Frontend::parseTableSection() {
@@ -301,6 +302,7 @@ void Frontend::parseElementSection() {
   for (uint32_t elementIndex = 0U; elementIndex < module_.numberElements; elementIndex++) {
     uint32_t const functionIndex{br_.readLEB128<uint32_t>()};
     confirm(functionIndex < module_.funcIndex2TypeIndex_.size(), "Function_index_out_of_range");
+    confirm(functionIndex >= module_.importsFunctionNumbers, "indirect call import function not supported yet");
     // offset is in number of Data
     elementIndexToFunctionIndex.set(elementIndex, functionIndex);
   }
@@ -328,11 +330,50 @@ void Frontend::parseExportSection() {
     module_.exportFuncNameToIndex_[exportName] = index;
   }
 }
+RuntimeBlock<uint8_t> *linearMemoryHelper = nullptr;
+int myPrintf(uint32_t const formatOffset, uint32_t const argsOffset) {
+  const char *const msg = bit_cast<const char *>(linearMemoryHelper->addr(formatOffset));
+  int const firstArg = *bit_cast<int *>(linearMemoryHelper->addr(argsOffset));
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+  printf(msg, firstArg);
+  return 0;
+}
+void Frontend::parseImportSection() {
+  uint32_t const importsNumbers{br_.readLEB128<uint32_t>()};
+  for (uint32_t counter = 0U; counter < importsNumbers; counter++) {
+    uint32_t const moduleNameLength{br_.readLEB128<uint32_t>()};
+    std::string moduleName{};
+    for (uint32_t i = 0; i < moduleNameLength; i++) {
+      moduleName += br_.readByte<char>();
+    }
+    uint32_t const fieldNameLength{br_.readLEB128<uint32_t>()};
+    std::string fieldName{};
+    for (uint32_t i = 0; i < fieldNameLength; i++) {
+      fieldName += br_.readByte<char>();
+    }
+    uint8_t const importKind{br_.readLEB128<uint8_t>()};
+    confirm(importKind == 0x00, "only support function import yet");
+
+    uint32_t const signatureIndex{br_.readLEB128<uint32_t>()};
+    module_.funcIndex2TypeIndex_.push_back(signatureIndex);
+    module_.functionInfos_.push_back({/*placeholder*/});
+
+    confirm(moduleName == "env" && fieldName == "myPrintf", "Only 'env.myPrintf' imports are supported at this time");
+    linearMemoryHelper = &linearMemory;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    uintptr_t const staticLinkPrintfAddr = reinterpret_cast<uintptr_t>(myPrintf);
+    // counter is the import's functionIndex, since imports must occur before all non-import definitions
+    funcAddrTable.set(counter, staticLinkPrintfAddr);
+  }
+
+  module_.importsFunctionNumbers = importsNumbers;
+}
 void Frontend::parseCodeSection() {
-  uint32_t const funcNumbers{br_.readLEB128<uint32_t>()};
+  uint32_t const internalFuncNumbers{br_.readLEB128<uint32_t>()};
 
   // parse each function body
-  for (uint32_t currentFuncIndex = 0U; currentFuncIndex < funcNumbers; ++currentFuncIndex) {
+  for (uint32_t internalFuncCounter = 0U; internalFuncCounter < internalFuncNumbers; ++internalFuncCounter) {
+    uint32_t const currentFuncIndex = internalFuncCounter + module_.importsFunctionNumbers;
     ////// Temporary variables of CURRENT function
     ///< record local's memory addr offset from SP in this function
     ///< to handle operand variables
@@ -376,7 +417,6 @@ void Frontend::parseCodeSection() {
 
     funcAddrTable.set(currentFuncIndex, as_.getCurrentAbsAddress());
 
-    // TODO(): other stack use excluding local
     uint32_t const stackUsage = op.getAlignedSize();
     LOG_DEBUG << "stackUsage = " << stackUsage << LOG_END;
     if (stackUsage != 0U) {
@@ -1038,7 +1078,14 @@ void Frontend::parseCodeSection() {
         prepareCallParams(callType, op);
 
         Storage const callIndexStorage{ConstUnion{callIndex}};
-        emitWasmCall(callIndexStorage);
+        bool const isImportFunction = callIndex < module_.importsFunctionNumbers;
+        if (isImportFunction) {
+          spillRuntime();
+          emitWasmCall(callIndexStorage);
+          recoverRuntime();
+        } else {
+          emitWasmCall(callIndexStorage);
+        }
         handleReturnValue(callType, op);
         recoveryCurrentFrameReg(funcBody, currentFuncTypeInfo);
 
@@ -1080,15 +1127,15 @@ void Frontend::parseCodeSection() {
         // pure signature index is checked above, so we can use it to get the function type
         prepareCallParams(callType, op);
 
-        ///< Get function abs address
-        REG const functionIndex = REG::R11; // 4B
         // reuse R10 as base address
         as_.emit_mov_x_imm64(REG::R10, elementIndexToFunctionIndex.getStartAddr());
+        ///< Get function abs address
+        REG const functionIndex = REG::R10; // 4B
         as_.ldr_offReg(functionIndex, REG::R10, elementIndex, false);
 
         ///< Emit call
         Storage const functionIndexRegStorage{REG{functionIndex}};
-        // emitWasmCall will use R9 R10 as scratch registers, functionIndexRegStorage as the param should avoid using R9 or R10
+        // emitWasmCall will use R9 as scratch registers, functionIndexRegStorage as the param should avoid using R9
         emitWasmCall(functionIndexRegStorage);
         handleReturnValue(callType, op);
         recoveryCurrentFrameReg(funcBody, currentFuncTypeInfo);
@@ -1382,7 +1429,7 @@ void Frontend::parseCodeSection() {
     // labelManager will destruct
   }
 
-  confirm(funcNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");
+  confirm(internalFuncNumbers + module_.importsFunctionNumbers == module_.functionInfos_.size(), "parse code functionBodys exception");
   confirm(codeSectionParsed == false, "");
   codeSectionParsed = true;
 }
@@ -1410,18 +1457,18 @@ void Frontend::emitWasmCall(Storage const callFuncIndex) {
   as_.str_base_byteOff(REG::SP, REG::LR, 0, true);
 
   // emit call
-  // use R10 as scratch register for function pointer. R9 is used for function table base address
+  // R9 as scratch register is used for function table base address and then for function pointer
   as_.emit_mov_x_imm64(REG::R9, funcAddrTable.getStartAddr());
   if (callFuncIndex.type_ == StorageType::REGISTER) {
     // offset reg will times 8
-    as_.ldr_offReg(REG::R10, REG::R9, callFuncIndex.location_.reg, true);
+    as_.ldr_offReg(REG::R9, REG::R9, callFuncIndex.location_.reg, true);
   } else if (callFuncIndex.type_ == StorageType::CONSTANT) {
     // offset imm is byte
-    as_.ldr_base_byteOff(REG::R10, REG::R9, callFuncIndex.location_.constUnion.u32 * sizeof(uintptr_t), true);
+    as_.ldr_base_byteOff(REG::R9, REG::R9, callFuncIndex.location_.constUnion.u32 * sizeof(uintptr_t), true);
   } else {
     confirm(false, "not supported yet");
   }
-  as_.blr(REG::R10);
+  as_.blr(REG::R9);
 
   // restore LR
   as_.ldr_base_byteOff(REG::LR, REG::SP, 0, true);
@@ -1458,6 +1505,13 @@ void Frontend::LabelManager::relpatchAllLabels() {
       as_.set_b_off(branchInsPosOff, insOffset);
     }
   }
+}
+
+void Frontend::spillRuntime() {
+  // need store X24~X28 to memory
+}
+void Frontend::recoverRuntime() {
+  // need load back X24~X28 from memory
 }
 
 void Frontend::makeElementIndexToPureSignatureIndex() {

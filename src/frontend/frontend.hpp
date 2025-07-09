@@ -76,6 +76,7 @@ private:
   void parseElementSection();
   void parseTableSection();
   void parseGlobalSection();
+  void parseImportSection();
 
   void parseMemorySection();
   void parseDataSection();
@@ -90,6 +91,10 @@ private:
   void handleReturnValue(ModuleInfo::TypeInfo const &funcType, OP &op);
 
   void makeElementIndexToPureSignatureIndex();
+
+  // Before and after call import function
+  void spillRuntime();
+  void recoverRuntime();
 
 public:
   bool codeSectionParsed = false;
