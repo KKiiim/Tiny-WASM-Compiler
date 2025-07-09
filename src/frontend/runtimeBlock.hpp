@@ -54,6 +54,10 @@ public:
     memcpy(&result, &m_[readPos], sizeof(Data));
     return result;
   }
+  /// @note offset is in number of Data, not bytes
+  Data *addr(uint32_t const offset) {
+    return &m_[offset * sizeof(Data)];
+  }
 
 private:
   uint8_t *m_ = nullptr;

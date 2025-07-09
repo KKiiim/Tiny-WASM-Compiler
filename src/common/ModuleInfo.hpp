@@ -86,6 +86,8 @@ public:
 
   SignatureMap signatureStringToPureSigIndex; // 1-1 mapping
 
+  uint32_t importsFunctionNumbers{0U};
+
   ////////////
   ///< Global
   ////////////
