@@ -119,19 +119,18 @@ void JsonReader::dump() const {
 }
 
 std::string TestCase::getSignature() const {
-  std::string format{};
-  if (!expected.ret.empty()) {
-    format += expected.ret[0].type == Type::i32 ? "i" : "I";
-  }
-  format += "(";
+  std::string format{'('};
   for (auto const &arg : action.args) {
     format += arg.type == Type::i32 ? "i" : "I";
   }
   format += ")";
+  if (!expected.ret.empty()) {
+    format += expected.ret[0].type == Type::i32 ? "i" : "I";
+  }
   return format;
 }
 
-void TestCase::setParams(std::array<uint64_t, MaxParamsForWasmFunction> &params) const {
+void TestCase::setParams(std::array<uint64_t, config::MaxParamsForWasmFunction> &params) const {
   confirm(params.size() >= action.args.size(), "Params array size must be at least as large as action args size");
   for (uint32_t i = 0; i < action.args.size(); i++) {
     params[i] = (action.args[i].type == Type::i32) ? static_cast<uint64_t>(action.args[i].value32) : static_cast<uint64_t>(action.args[i].value64);

@@ -448,8 +448,8 @@ void Assembler::set_bl_off(uint32_t const bl_instructionPositionOffsetToOutputBi
   outputBinary_.set(bl_instructionPositionOffsetToOutputBinary, opcode);
 }
 
-void Assembler::setTrap(uint32_t const trapcode) {
-  mov_r_imm16(REG::R0, trapcode, false);
+void Assembler::setTrap(Trapcode const trapcode) {
+  mov_r_imm16(REG::R0, static_cast<uint32_t>(trapcode), false);
   brk();
 }
 

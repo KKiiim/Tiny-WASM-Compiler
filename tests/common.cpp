@@ -15,7 +15,7 @@ void execTest(TestCase const &testCase, Runtime &runtime) {
   confirm(testCase.action.actionType == Type::invoke, "Expected action type to be invoke");
 
   // [ref: doc-design]
-  std::array<uint64_t, MaxParamsForWasmFunction> params{0, 0, 0, 0, 0, 0, 0};
+  std::array<uint64_t, config::MaxParamsForWasmFunction> params{0, 0, 0, 0, 0, 0, 0};
   testCase.setParams(params);
   auto const &signature = testCase.getSignature();
 

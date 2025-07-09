@@ -61,7 +61,7 @@ public:
   std::string text; ///< If is assert_trap/exhaustion type, this is the trap message
 
   std::string getSignature() const;
-  void setParams(std::array<uint64_t, MaxParamsForWasmFunction> &params) const;
+  void setParams(std::array<uint64_t, config::MaxParamsForWasmFunction> &params) const;
 
 private:
 };

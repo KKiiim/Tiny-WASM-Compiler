@@ -52,7 +52,7 @@ public:
 
       ///< if-constexpr only supported after C++17
       if constexpr (!std::is_void<TRet>::value) {
-        // if (signature[0] != '(') {
+        // if (signature.end != ')') {
         TRet const v = compiler_.singleCallWithIndex<TRet>(std::forward<Args>(args)..., functionIndex);
         ret.returnValue = static_cast<uint64_t>(v);
       } else {

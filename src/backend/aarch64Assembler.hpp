@@ -20,7 +20,7 @@ uint8_t constexpr const MaxPositiveImmForLdrStr = 0xFFU;
 class Relpatch;
 class Assembler {
 public:
-  Assembler() : outputBinary_(8U * DefaultPageSize) {
+  Assembler() : outputBinary_(8U * config::DefaultPageSize) {
   }
   inline ExecutableMemory &getExecutableMemory() {
     return outputBinary_;
@@ -103,7 +103,7 @@ public:
   void emit_mov_w_imm32(REG const destReg, uint32_t const imm);
   void decreaseSPWithClean(uint32_t const bytes);
 
-  void setTrap(uint32_t const trapcode);
+  void setTrap(Trapcode const trapcode);
 
   void prepare_b_cond(CC const condition);
   void prepare_b();

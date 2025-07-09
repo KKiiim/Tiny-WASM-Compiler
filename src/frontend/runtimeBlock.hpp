@@ -10,7 +10,7 @@
 #include "src/common/util.hpp"
 
 template <typename Data> class RuntimeBlock {
-  static constexpr const uint32_t defaultBlockSize = DefaultPageSize;
+  static constexpr const uint32_t defaultBlockSize = config::DefaultPageSize;
 
 public:
   RuntimeBlock() : m_(static_cast<uint8_t *>(malloc(defaultBlockSize))) {

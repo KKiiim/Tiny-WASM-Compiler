@@ -72,7 +72,6 @@ private:
   void parseFunctionSection();
   void parseExportSection();
   void parseCodeSection();
-  void parseNameSection();
   void parseElementSection();
   void parseTableSection();
   void parseGlobalSection();
@@ -106,7 +105,7 @@ public:
 
   RuntimeBlock<uint8_t> operandStack_; ///< JIT runtime stack for simulate WASM operand stack
   RuntimeBlock<uint64_t> globalMemory; ///< JIT runtime global memory. u32 and u64 are aligned to 8 bytes to store
-  RuntimeBlock<uint8_t> linearMemory{MaxLinearMemoryPages};
+  RuntimeBlock<uint8_t> linearMemory{config::MaxLinearMemoryPages};
   // FIXME(#88): don't need too large memory just for store linearMemoryByteSize(only 32bits)
   // Should serialize these blocks to an uniformly outputBinary.
   RuntimeBlock<uint32_t> linearMemoryByteSize;
