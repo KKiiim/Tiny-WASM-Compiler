@@ -1362,9 +1362,9 @@ void Frontend::parseCodeSection() {
         as_.emit_mov_w_imm32(resultReg, 1U);
 
         as_.cmp_r_r(REG::R10, REG::R9, is64bit);
-        Relpatch const higher = as_.prepareJmp(CC::HI);
+        Relpatch const higherOrSame = as_.prepareJmp(CC::HS);
         as_.emit_mov_w_imm32(resultReg, 0U);
-        higher.linkToHere();
+        higherOrSame.linkToHere();
 
         as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
