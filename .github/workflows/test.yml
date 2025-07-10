@@ -29,9 +29,9 @@ jobs:
           cache: "npm"
       - run: npm ci
 
-      - name: cross compile arm gtest
-        run: |
-          cd third_party/googletest && mkdir -p build && cd build && cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc && make -j && sudo make install
+      # - name: cross compile arm gtest
+      #   run: |
+      #     cd third_party/googletest && mkdir -p build && cd build && cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc && make -j && sudo make install
 
       - name: gen test case
         run: |
