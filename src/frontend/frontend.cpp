@@ -30,9 +30,7 @@ ExecutableMemory &Frontend::startCompilation(std::string const &wasmPath) {
     uint32_t const sectionSize{br_.readLEB128<uint32_t>()}; // FIXME(): ignore invalid size check
     switch (sectionType) {
     case SectionType::CUSTOM:
-      br_.jump(sectionSize);
-      // TODO(): Not supported yet
-      // parseNameSection();
+      br_.jump(sectionSize); // Not supported yet
       break;
     case SectionType::TYPE:
       parseTypeSection();
@@ -124,7 +122,7 @@ void Frontend::genWrapperFunction() {
   }
 
   ///< Init X24 for stack guard
-  as_.emit_mov_x_imm64(StackGuard, stackGuardSize);
+  as_.emit_mov_x_imm64(StackGuard, config::stackGuardSize);
   as_.sub_r_r_immReg(StackGuard, REG::SP, StackGuard, true);
 
   as_.dec_sp(16U); // reserve 8 bytes(align to 16) for return address(LR)
@@ -148,10 +146,10 @@ void Frontend::parseMemorySection() {
     memoryInfo.initialSize = br_.readLEB128<uint32_t>();
     if (memoryInfo.hasLimit) {
       memoryInfo.maximumSize = br_.readLEB128<uint32_t>();
-      confirm(memoryInfo.maximumSize <= MaxLinearMemoryPages, "must");
+      confirm(memoryInfo.maximumSize <= config::MaxLinearMemoryPages, "must");
     }
     module_.memoryInfos.push_back(memoryInfo);
-    uint64_t const memoryByteSize = static_cast<uint64_t>(DefaultPageSize) * module_.memoryInfos[0].initialSize;
+    uint64_t const memoryByteSize = static_cast<uint64_t>(config::DefaultPageSize) * module_.memoryInfos[0].initialSize;
     confirm(memoryByteSize <= UINT32_MAX, "memoryByteSize assumed to within 32 bits");
     linearMemoryByteSize.set(0, static_cast<uint32_t>(memoryByteSize & 0xFFFFFFFFU));
   }
@@ -224,27 +222,24 @@ void Frontend::parseTypeSection() {
     std::vector<WasmType> paramInfos{};
     std::vector<WasmType> resultInfos{};
 
-    std::string params{"("};
+    std::string signature{};
+    signature += '(';
     uint32_t const paramsNum = br_.readLEB128<uint32_t>();
-    confirm(paramsNum <= MaxParamsForWasmFunction, "more params not supported yet");
+    confirm(paramsNum <= config::MaxParamsForWasmFunction, "more params not supported yet");
     for (uint32_t paramIndex = 0U; paramIndex < paramsNum; paramIndex++) {
       WasmType const pType = br_.readByte<WasmType>();
       paramInfos.push_back(pType);
-      params.push_back(static_cast<char>(ModuleInfo::wasmType2SignatureType(pType)));
+      signature += static_cast<char>(ModuleInfo::wasmType2SignatureType(pType));
     }
-    params.push_back(')'); // end of params
-
-    std::string signature{};
+    signature += ')'; // end of params
 
     uint32_t const resultNum = br_.readLEB128<uint32_t>();
     for (uint32_t resultIndex = 0U; resultIndex < resultNum; resultIndex++) {
       WasmType const rType = br_.readByte<WasmType>();
       resultInfos.push_back(rType);
-      signature.push_back(static_cast<char>(ModuleInfo::wasmType2SignatureType(rType)));
+      signature += static_cast<char>(ModuleInfo::wasmType2SignatureType(rType));
     }
     confirm(resultInfos.size() <= 1U, "only one result supported");
-
-    signature += params;
 
     module_.typeInfo_.push_back({paramInfos, resultInfos, signature});
 
@@ -309,10 +304,7 @@ void Frontend::parseElementSection() {
 }
 void Frontend::parseExportSection() {
   uint32_t const exportNumbers{br_.readLEB128<uint32_t>()};
-  uint32_t counter = 0U;
-  while (counter < exportNumbers) {
-    counter++;
-
+  for (uint32_t counter = 0U; counter < exportNumbers; counter++) {
     uint32_t const stringLength = br_.readLEB128<uint32_t>();
     std::string exportName{};
     for (uint32_t i = 0; i < stringLength; i++) {
@@ -321,13 +313,14 @@ void Frontend::parseExportSection() {
 
     WasmImportExportType const type{br_.readByte<WasmImportExportType>()};
     uint32_t const index = br_.readLEB128<uint32_t>();
-
     if (type != WasmImportExportType::FUNC) {
       continue; ///< only function export supported yet
     }
 
     module_.export_.push_back({exportName, type, index});
-    module_.exportFuncNameToIndex_[exportName] = index;
+    auto &nameToIndex = module_.exportFuncNameToIndex_;
+    confirm(nameToIndex.find(exportName) == nameToIndex.end(), "export_name_already_exists");
+    nameToIndex[exportName] = index;
   }
 }
 RuntimeBlock<uint8_t> *linearMemoryHelper = nullptr;
@@ -1295,7 +1288,7 @@ void Frontend::parseCodeSection() {
         // memory size is in pages, 1 page = 64K
         REG const memorySizeReg = REG::R9;
         REG const memoryPageSizeReg = REG::R10;
-        as_.emit_mov_x_imm64(memoryPageSizeReg, DefaultPageSize);
+        as_.emit_mov_x_imm64(memoryPageSizeReg, config::DefaultPageSize);
         as_.udiv_r_r(memorySizeReg, SizeLinMem, memoryPageSizeReg, true);
         as_.str_base_byteOff(ROP, memorySizeReg, 0, false);
         op.addROP(false); // memory size is i32
@@ -1313,14 +1306,14 @@ void Frontend::parseCodeSection() {
         // now growSizeReg is number of pages
         REG const currentPageSize = REG::R10;
         REG const memorySizePerPage = REG::R11;
-        as_.emit_mov_x_imm64(memorySizePerPage, DefaultPageSize);
+        as_.emit_mov_x_imm64(memorySizePerPage, config::DefaultPageSize);
         as_.udiv_r_r(currentPageSize, SizeLinMem, memorySizePerPage, true);
         REG const toPageSize = REG::R12;
         as_.add_r_r_shiftR(toPageSize, currentPageSize, growSizeReg, false);
 
         ///< Get min(embedderLimit, moduleLimit)
         REG const limitSize = REG::R13;
-        as_.emit_mov_w_imm32(limitSize, MaxLinearMemoryPages); // init with embedderLimit
+        as_.emit_mov_w_imm32(limitSize, config::MaxLinearMemoryPages); // init with embedderLimit
         if (memoryInfo.hasLimit) {
           as_.cmp_r_imm(limitSize, memoryInfo.maximumSize, false);
           Relpatch const noNeedToUpdateMin = as_.prepareJmp(CC::LO);
@@ -1367,9 +1360,9 @@ void Frontend::parseCodeSection() {
         as_.emit_mov_w_imm32(resultReg, 1U);
 
         as_.cmp_r_r(REG::R10, REG::R9, is64bit);
-        Relpatch const higher = as_.prepareJmp(CC::HI);
+        Relpatch const higherOrSame = as_.prepareJmp(CC::HS);
         as_.emit_mov_w_imm32(resultReg, 0U);
-        higher.linkToHere();
+        higherOrSame.linkToHere();
 
         as_.str_base_byteOff(ROP, resultReg, 0U, false);
         op.addROP(false);
@@ -1433,13 +1426,7 @@ void Frontend::parseCodeSection() {
   confirm(codeSectionParsed == false, "");
   codeSectionParsed = true;
 }
-void Frontend::parseNameSection() {
-  // uint32_t const stringLength = br_.readLEB128<uint32_t>();
-  // std::string name{};
-  // for (uint32_t i = 0; i < stringLength; i++) {
-  //   name += static_cast<char>(br_.readByte());
-  // }
-}
+
 void Frontend::prepareCallParams(ModuleInfo::TypeInfo const &callType, OP &op) {
   auto const &callParams = callType.params;
   confirm(callParams.size() <= 8, "call params size should not exceed 8");
